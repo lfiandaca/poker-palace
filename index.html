@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a3d2e">
+<title>Poker Palace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --felt:#0a3d2e; --felt-deep:#072a20; --felt-light:#0f5240;
+  --gold:#d4af37; --gold-bright:#f0d878; --gold-dim:#9a7d28;
+  --cream:#f4ecd8; --ink:#0a1f17; --crimson:#9b1d20; --crimson-bright:#c0282b;
+  --shadow:rgba(0,0,0,.45);
+  --suit-red:#d83a3a; --suit-black:#1a1a1a;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  background:radial-gradient(ellipse at 50% 0%, var(--felt-light) 0%, var(--felt) 38%, var(--felt-deep) 100%);
+  color:var(--cream); min-height:100vh; background-attachment:fixed;
+  padding:env(safe-area-inset-top) 0 calc(80px + env(safe-area-inset-bottom));
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+}
+.wrap{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:0 16px}
+
+/* ── Header ── */
+header{text-align:center;padding:28px 0 18px}
+.crest{font-size:34px;letter-spacing:6px;line-height:1}
+.crest .s-black{color:#111;text-shadow:0 1px 2px rgba(255,255,255,.15)}
+.crest .s-red{color:var(--suit-red);text-shadow:0 0 12px rgba(216,58,58,.5)}
+h1{
+  font-family:'Cinzel',serif;font-weight:900;font-size:clamp(26px,7vw,40px);
+  letter-spacing:3px;color:var(--gold-bright);margin-top:6px;
+  text-shadow:0 2px 0 var(--gold-dim),0 4px 18px var(--shadow);
+}
+.subtitle{font-style:italic;font-size:17px;color:var(--cream);opacity:.7;margin-top:2px;letter-spacing:1px}
+.rule{height:2px;width:120px;margin:14px auto 0;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.header-btns{margin-top:14px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.pdf-btn{
+  padding:11px 22px;border:1px solid var(--gold);border-radius:30px;cursor:pointer;
+  background:rgba(0,0,0,.25);color:var(--gold-bright);
+  font-family:'Cinzel',serif;font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;
+  transition:.2s;
+}
+.pdf-btn:active{transform:scale(.96);background:var(--gold);color:var(--ink)}
+.nav-btn{
+  padding:9px 16px;border:1px solid rgba(212,175,55,.35);border-radius:24px;cursor:pointer;
+  background:rgba(0,0,0,.2);color:var(--gold);
+  font-family:'Cinzel',serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  transition:.2s;-webkit-tap-highlight-color:rgba(212,175,55,.2);
+  touch-action:manipulation;-webkit-appearance:none;user-select:none;
+}
+.nav-btn:active,.nav-btn.active-page{background:rgba(212,175,55,.12);color:var(--gold-bright)}
+.home-btn{
+  display:none;margin-top:14px;padding:9px 18px;
+  border:1px solid rgba(212,175,55,.4);border-radius:24px;cursor:pointer;
+  background:rgba(0,0,0,.2);color:var(--gold);
+  font-family:'Cinzel',serif;font-weight:700;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  transition:.2s;
+}
+.home-btn.visible{display:inline-block}
+.home-btn:active{background:rgba(212,175,55,.12)}
+
+/* ── Top-level page views ── */
+.page{display:none}
+.page.active{display:block;animation:fade .35s ease}
+
+/* ── Tabs (stagione corrente) ── */
+nav{display:flex;gap:6px;margin:22px 0 18px;background:rgba(0,0,0,.25);padding:6px;border-radius:14px;border:1px solid rgba(212,175,55,.18)}
+.tab{
+  flex:1;padding:11px 6px;border:none;background:transparent;color:var(--cream);
+  font-family:'Cinzel',serif;font-weight:700;font-size:12px;letter-spacing:1px;
+  border-radius:10px;cursor:pointer;opacity:.55;transition:.25s;text-transform:uppercase;
+  -webkit-tap-highlight-color:rgba(212,175,55,.2);
+  touch-action:manipulation;
+  -webkit-appearance:none;
+  user-select:none;
+}
+.tab.active{background:linear-gradient(180deg,var(--gold),var(--gold-dim));color:var(--ink);opacity:1;box-shadow:0 3px 12px rgba(0,0,0,.4)}
+.tab .s-blk{color:#111}
+.tab.active .s-blk{color:var(--suit-black)}
+.view{display:none;animation:fade .4s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── Leaderboard ── */
+.board-title{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--gold);text-align:center;margin-bottom:14px;text-transform:uppercase}
+.row{
+  display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;
+  background:linear-gradient(100deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid rgba(212,175,55,.15);border-radius:12px;padding:13px 16px;margin-bottom:9px;
+  position:relative;overflow:hidden;transition:.3s;
+}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent}
+.row.r1::before{background:var(--gold-bright)}
+.row.r2::before{background:#c0c0c0}
+.row.r3::before{background:#cd7f32}
+.rank{font-family:'Cinzel',serif;font-weight:900;font-size:22px;color:var(--gold);text-align:center}
+.row.r1 .rank{color:var(--gold-bright)}
+.pname{font-size:21px;font-weight:600;letter-spacing:.5px}
+.pscore{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:24px;color:var(--cream)}
+.pscore small{font-size:12px;opacity:.5;font-weight:600}
+.row.r1{border-color:rgba(212,175,55,.5);box-shadow:0 0 22px rgba(212,175,55,.12)}
+.row.empty-rank .pscore{opacity:.3}
+
+/* ── Stats table ── */
+.stats-grid{overflow-x:auto;border-radius:12px;border:1px solid rgba(212,175,55,.15)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);padding:13px 8px;background:rgba(0,0,0,.3);text-align:center;white-space:nowrap}
+th:first-child{text-align:left;padding-left:16px}
+td{padding:13px 8px;text-align:center;border-top:1px solid rgba(212,175,55,.08);font-family:'JetBrains Mono',monospace;font-weight:600}
+td:first-child{text-align:left;padding-left:16px;font-family:'Cormorant Garamond';font-size:18px;font-weight:600}
+tbody tr:nth-child(odd){background:rgba(255,255,255,.02)}
+
+/* ── Admin ── */
+.card{background:rgba(0,0,0,.28);border:1px solid rgba(212,175,55,.2);border-radius:16px;padding:20px;margin-bottom:16px}
+.card h3{font-family:'Cinzel',serif;font-size:13px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:16px}
+label{display:block;font-size:14px;letter-spacing:.5px;opacity:.75;margin:14px 0 6px;text-transform:uppercase;font-family:'Cinzel',serif;font-weight:500;font-size:11px}
+select,input{
+  width:100%;padding:13px 14px;border-radius:10px;border:1px solid rgba(212,175,55,.3);
+  background:rgba(0,0,0,.3);color:var(--cream);font-family:'Cormorant Garamond';font-size:18px;font-weight:600;
+}
+select:focus,input:focus{outline:none;border-color:var(--gold)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{
+  width:100%;margin-top:20px;padding:15px;border:none;border-radius:12px;cursor:pointer;
+  font-family:'Cinzel',serif;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;
+  background:linear-gradient(180deg,var(--gold-bright),var(--gold-dim));color:var(--ink);
+  box-shadow:0 4px 14px rgba(0,0,0,.4);transition:.2s;
+}
+.btn:active{transform:translateY(2px)}
+.hint{font-size:14px;font-style:italic;opacity:.55;margin-top:8px;line-height:1.4}
+.demo-badge{display:inline-block;background:var(--crimson);color:var(--cream);font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:4px 10px;border-radius:6px;margin-bottom:14px;text-transform:uppercase}
+
+/* ── Calendario ── */
+.cal-grid{display:flex;flex-direction:column;gap:8px}
+.cal-row{
+  display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:12px;
+  padding:13px 16px;border-radius:12px;
+  border:1px solid rgba(212,175,55,.15);
+  background:linear-gradient(100deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  transition:.2s;
+}
+.cal-row.played{border-color:rgba(212,175,55,.35);background:rgba(212,175,55,.06)}
+.cal-row.next{border-color:rgba(216,58,58,.5);box-shadow:0 0 16px rgba(216,58,58,.15)}
+.cal-num{font-family:'Cinzel',serif;font-weight:900;font-size:18px;color:var(--gold);text-align:center}
+.cal-info{}
+.cal-label{font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.5}
+.cal-date{font-size:19px;font-weight:600;margin-top:2px}
+.cal-date.tbd{opacity:.35;font-style:italic}
+.cal-badge{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;letter-spacing:1px;padding:4px 8px;border-radius:6px;white-space:nowrap}
+.badge-played{background:rgba(212,175,55,.2);color:var(--gold-bright)}
+.badge-next{background:var(--crimson);color:var(--cream)}
+.badge-future{background:rgba(255,255,255,.08);color:var(--cream);opacity:.5}
+.cal-edit-row{display:grid;grid-template-columns:36px 1fr auto auto;align-items:center;gap:10px;
+  padding:11px 14px;border-radius:12px;background:rgba(0,0,0,.2);border:1px solid rgba(212,175,55,.2);margin-bottom:7px}
+.cal-edit-row input[type=date]{
+  padding:8px 10px;font-size:15px;font-family:'Cormorant Garamond',serif;color:var(--cream);
+  background:rgba(0,0,0,.3);border:1px solid rgba(212,175,55,.3);border-radius:8px;width:100%;
+}
+.cal-edit-row input[type=date]:focus{outline:none;border-color:var(--gold)}
+.btn-sm{padding:8px 14px;border:none;border-radius:8px;cursor:pointer;font-family:'Cinzel',serif;
+  font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase;transition:.2s}
+.btn-save{background:linear-gradient(180deg,var(--gold-bright),var(--gold-dim));color:var(--ink)}
+.btn-clear{background:rgba(155,29,32,.4);color:var(--cream);border:1px solid rgba(155,29,32,.6)}
+.log-item{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid rgba(212,175,55,.08);font-size:16px}
+.log-item:last-child{border:none}
+.log-meta{font-family:'JetBrains Mono',monospace;font-size:11px;opacity:.5}
+.log-win{color:var(--gold-bright);font-weight:600}
+.log-run{opacity:.7}
+.empty{text-align:center;opacity:.4;font-style:italic;padding:30px}
+.del{background:none;border:none;color:var(--crimson-bright);font-size:18px;cursor:pointer;padding:4px 8px;opacity:.6}
+
+/* ── Prossima stagione ── */
+.coming-banner{
+  margin:8px 0 26px;padding:20px 24px;
+  background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(212,175,55,.03));
+  border:1px solid rgba(212,175,55,.3);border-radius:16px;text-align:center;
+}
+.coming-banner .icon{font-size:32px;margin-bottom:8px}
+.coming-banner h2{font-family:'Cinzel',serif;font-size:16px;letter-spacing:2px;color:var(--gold-bright);text-transform:uppercase}
+.coming-banner p{font-style:italic;font-size:15px;opacity:.65;margin-top:6px;line-height:1.5}
+
+/* ── Palmarès ── */
+.palmares-section{margin-top:28px}
+.palmares-row{
+  display:grid;grid-template-columns:1fr auto;align-items:start;gap:10px;
+  padding:11px 16px;border-bottom:1px solid rgba(212,175,55,.1);
+}
+.palmares-row:first-child{border-top:1px solid rgba(212,175,55,.1)}
+.palmares-row.current-season{background:rgba(212,175,55,.05)}
+.pal-season{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.5px;opacity:.6;margin-bottom:2px}
+.pal-winner{font-size:18px;font-weight:600}
+.pal-winner.ongoing{font-style:italic;opacity:.5}
+.pal-right{text-align:right}
+.pal-pts{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:var(--gold)}
+.pal-note{font-size:11px;font-style:italic;opacity:.4;margin-top:2px}
+.pal-trophy{color:var(--gold-bright);margin-right:4px}
+.pal-finali-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.5px;text-transform:uppercase;opacity:.4;margin-top:6px}
+.pal-finali-val{font-size:14px;font-weight:600;opacity:.75}
+.season-picker{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.season-card{
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;
+  padding:16px 20px;border-radius:14px;cursor:pointer;
+  border:1px solid rgba(212,175,55,.2);
+  background:linear-gradient(100deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  transition:.25s;
+}
+.season-card:active,.season-card.open{border-color:rgba(212,175,55,.55);background:rgba(212,175,55,.07)}
+.sc-year{font-family:'Cinzel',serif;font-weight:900;font-size:19px;color:var(--gold-bright);letter-spacing:1px}
+.sc-sub{font-size:14px;font-style:italic;opacity:.55;margin-top:2px}
+.sc-arrow{font-size:20px;color:var(--gold);opacity:.5;transition:.3s;display:inline-block}
+.season-card.open .sc-arrow{opacity:1;transform:rotate(90deg)}
+.season-detail{display:none;margin-bottom:10px;animation:fade .35s ease}
+.season-detail.active{display:block}
+.arch-section-gap{margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="crest" id="crest-tap"><span class="s-black">&#9824;</span> <span class="s-red">&#9829;</span> <span class="s-red">&#9830;</span> <span class="s-black">&#9827;</span></div>
+    <h1>Poker Palace</h1>
+    <div class="subtitle" id="main-subtitle">Stagione 2025 &ndash; 2026</div>
+    <div class="rule"></div>
+    <div class="header-btns">
+      <button class="pdf-btn" id="pdf-btn-main" onclick="generatePDF()"><span style="color:var(--suit-red)">&#9829;</span> Salva PDF</button>
+      <button class="nav-btn" id="btn-next" onclick="showPage('next')">&#127183; 2026–2027</button>
+      <button class="nav-btn" id="btn-archivio" onclick="showPage('archivio')">&#128218; Archivio</button>
+      <button class="nav-btn" id="btn-admin-header" onclick="showPage('current');activateAdminTab()" style="display:none">&#9881; Admin</button>
+    </div>
+    <div style="margin-top:10px;text-align:center">
+      <button class="home-btn" id="btn-home" onclick="showPage('current')">&#8592; Home 2025–2026</button>
+    </div>
+    <div id="admin-logout" style="display:none;margin-top:10px">
+      <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--gold);opacity:.7">&#128274; Modalità Admin attiva &nbsp;</span>
+      <button onclick="logoutAdmin()" style="background:none;border:1px solid rgba(212,175,55,.4);border-radius:6px;color:var(--gold);font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:3px 8px;cursor:pointer">ESCI</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════
+       PAGE: Stagione corrente 2025-2026
+  ════════════════════════════════════════ -->
+  <div class="page active" id="page-current">
+    <nav>
+      <button class="tab active" data-view="punti"><span style="color:var(--suit-red)">&#9829;</span> Punti</button>
+      <button class="tab" data-view="finali"><span style="color:var(--suit-red)">&#9830;</span> Finali</button>
+      <button class="tab" data-view="calendario">&#128197; Cal.</button>
+      <button class="tab" data-view="stats"><span class="s-blk">&#9824;</span> Stats</button>
+      <button class="tab" data-view="palmares">&#127942; Palm.</button>
+    </nav>
+    <section class="view active" id="punti">
+      <div class="board-title">Classifica Punti</div>
+      <div id="board-punti"></div>
+    </section>
+    <section class="view" id="finali">
+      <div class="board-title">Classifica Finali</div>
+      <div id="board-finali"></div>
+    </section>
+    <section class="view" id="calendario">
+      <div class="board-title">Calendario Torneo</div>
+      <div class="cal-grid" id="cal-view"></div>
+    </section>
+    <section class="view" id="stats">
+      <div class="board-title">Statistiche Complete</div>
+      <div class="stats-grid"><table>
+        <thead><tr><th>Giocatore</th><th>Punti</th><th>Vittorie</th><th>Finali</th></tr></thead>
+        <tbody id="stats-body"></tbody>
+      </table></div>
+      <p class="hint">Punti = 5 per ogni partita vinta. Finali = volte arrivato in finale.</p>
+    </section>
+    <section class="view" id="palmares">
+      <div class="board-title">Palmarès</div>
+      <div id="palmares-list"></div>
+    </section>
+    <section class="view" id="admin">
+      <span class="demo-badge" id="admin-badge">&#9888; Modalit&agrave; Demo</span>
+      <div class="card">
+        <h3>&#128197; Gestisci Calendario</h3>
+        <div id="cal-admin"></div>
+        <p class="hint">Inserisci la data di ogni giornata. Lascia vuoto se ancora da definire.</p>
+      </div>
+      <div class="card">
+        <h3>Registra una partita</h3>
+        <label>Giornata</label>
+        <input type="number" id="in-giornata" min="1" value="13">
+        <div class="duo">
+          <div><label>&#127942; Ha vinto (+5)</label><select id="in-winner"></select></div>
+          <div><label>&#129352; In finale (+1)</label><select id="in-final"></select></div>
+        </div>
+        <button class="btn" onclick="addMatch()">Registra Partita</button>
+        <p class="hint">Vittoria e finale sono indipendenti. Puoi registrarne solo una lasciando l'altra su &ldquo;&mdash;&rdquo;.</p>
+      </div>
+      <div class="card">
+        <h3>Registro partite (<span id="match-count">0</span>)</h3>
+        <div id="match-log"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       PAGE: Prossima stagione 2026-2027
+  ════════════════════════════════════════ -->
+  <div class="page" id="page-next">
+    <div class="coming-banner">
+      <div class="icon">&#127183;</div>
+      <h2>Stagione in arrivo</h2>
+      <p>Il torneo inizia a settembre 2026.<br>Il calendario è già definito — ci vediamo al tavolo.</p>
+    </div>
+    <div class="board-title">Calendario Torneo</div>
+    <div class="cal-grid" id="cal-next"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       PAGE: Archivio
+  ════════════════════════════════════════ -->
+  <div class="page" id="page-archivio">
+    <div class="season-picker" id="arch-picker"></div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v12</footer>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPT
+════════════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc,
+         onSnapshot, setDoc, getDocs }
+  from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+/* ── Firebase ── */
+const firebaseConfig = {
+  apiKey:"AIzaSyCS4S6GCy0slrAPFESVnSYhnMApR5VafTk",
+  authDomain:"poker-palace-b4f18.firebaseapp.com",
+  projectId:"poker-palace-b4f18",
+  storageBucket:"poker-palace-b4f18.firebasestorage.app",
+  messagingSenderId:"949745349127",
+  appId:"1:949745349127:web:feeb8e0853e47d9e5c70a2"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const winsCol   = collection(db,'wins');
+const finalsCol = collection(db,'finals');
+const calDoc    = doc(db,'meta','calendario');
+
+/* ── Stato corrente ── */
+const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
+let wins=[], finals=[];
+let calendario = Array.from({length:15},(_,i)=>({g:i+1,data:""}));
+
+/* ── Dati storici archivio ── */
+const SEASONS = [
+  {
+    id:"2425", label:"2024 – 2025", note:"8 giornate · 6 giocatori",
+    players:["Benvenuto","Cataldo","Crobu","Lamberti","Sgambetterra","Ciconte"],
+    punti: {Benvenuto:0,Cataldo:25,Crobu:50,Lamberti:10,Sgambetterra:15,Ciconte:20},
+    finali:{Benvenuto:0,Cataldo:7, Crobu:2, Lamberti:6, Sgambetterra:2, Ciconte:7},
+  },
+  {
+    id:"2324", label:"2023 – 2024", note:"8 giornate · 6 giocatori",
+    players:["Benvenuto","Cataldo","Crobu","Lamberti","Sgambetterra","Ciconte"],
+    punti: {Benvenuto:0,Cataldo:15,Crobu:15,Lamberti:45,Sgambetterra:30,Ciconte:15},
+    finali:{Benvenuto:0,Cataldo:6, Crobu:4, Lamberti:3, Sgambetterra:4, Ciconte:7},
+  },
+  {
+    id:"2223", label:"2022 – 2023", note:"8 giornate · 6 giocatori",
+    players:["Benvenuto","Cataldo","Crobu","Lamberti","Sgambetterra","Ciconte"],
+    punti: {Benvenuto:10,Cataldo:40,Crobu:25,Lamberti:10,Sgambetterra:25,Ciconte:10},
+    finali:{Benvenuto:7, Cataldo:3, Crobu:3, Lamberti:5, Sgambetterra:4, Ciconte:2},
+  },
+  {
+    id:"2122", label:"2021 – 2022", note:"8 giornate · 6 giocatori",
+    players:["Cataldo","Crobu","Lamberti","Sgambetterra","Benvenuto","Ciconte"],
+    punti: {Cataldo:25,Crobu:45,Lamberti:20,Sgambetterra:20,Benvenuto:10,Ciconte:0},
+    finali:{Cataldo:6, Crobu:5, Lamberti:5, Sgambetterra:2, Benvenuto:4, Ciconte:2},
+  },
+  {
+    id:"2021", label:"2020 – 2021", note:"8 giornate · 4 giocatori",
+    players:["Cataldo","Crobu","Lamberti","Sgambetterra"],
+    punti: {Cataldo:25,Crobu:30,Lamberti:55,Sgambetterra:10},
+    finali:{Cataldo:8, Crobu:6, Lamberti:6, Sgambetterra:4},
+  },
+  {
+    id:"1920", label:"2019 – 2020", note:"8 giornate · 5 giocatori",
+    players:["Benvenuto","Cataldo","Crobu","Lamberti","Sgambetterra"],
+    punti: {Benvenuto:15,Cataldo:25,Crobu:30,Lamberti:25,Sgambetterra:25},
+    finali:{Benvenuto:null,Cataldo:null,Crobu:null,Lamberti:null,Sgambetterra:null},
+    noFinali:true,
+  },
+  {
+    id:"1819", label:"2018 – 2019", note:"dati parziali",
+    players:["Cataldo"],
+    punti: {Cataldo:0},
+    finali:{Cataldo:0},
+    soloVincitore:true,
+  },
+  {
+    id:"1718", label:"2017 – 2018", note:"dati parziali",
+    players:["Cataldo"],
+    punti: {Cataldo:0},
+    finali:{Cataldo:0},
+    soloVincitore:true,
+  },
+  {
+    id:"1617", label:"2016 – 2017", note:"dati parziali · 5 giocatori",
+    players:["Lamberti","Cataldo","Sgambetterra","Benvenuto","Ciconte","Crobu"],
+    punti: {Lamberti:72,Cataldo:25,Sgambetterra:17,Benvenuto:13,Ciconte:12,Crobu:7},
+    finali:{Lamberti:null,Cataldo:null,Sgambetterra:null,Benvenuto:null,Ciconte:null,Crobu:null},
+    noFinali:true,
+  },
+  {
+    id:"1516", label:"2015 – 2016", note:"dati parziali · 6 giocatori",
+    players:["Crobu","Cataldo","Ciconte","Sgambetterra","Benvenuto","Lamberti"],
+    punti: {Crobu:34,Cataldo:34,Ciconte:23,Sgambetterra:21,Benvenuto:16,Lamberti:5},
+    finali:{Crobu:null,Cataldo:null,Ciconte:null,Sgambetterra:null,Benvenuto:null,Lamberti:null},
+    noFinali:true,
+    note2:"Crobu vince per più finali disputate",
+  },
+];
+
+/* ── Palmarès (vincitore per stagione) ── */
+const PALMARES = [
+  {season:"2025 – 2026", winner:"Lamberti",  pts:"60pt"},
+  {season:"2024 – 2025", winner:"Crobu",     pts:"50pt"},
+  {season:"2023 – 2024", winner:"Lamberti",  pts:"45pt"},
+  {season:"2022 – 2023", winner:"Cataldo",   pts:"40pt"},
+  {season:"2021 – 2022", winner:"Crobu",     pts:"45pt"},
+  {season:"2020 – 2021", winner:"Lamberti",  pts:"55pt"},
+  {season:"2019 – 2020", winner:"Crobu",     pts:"30pt"},
+  {season:"2018 – 2019", winner:"Cataldo",   pts:"",     note:"dati parziali"},
+  {season:"2017 – 2018", winner:"Cataldo",   pts:"",     note:"dati parziali"},
+  {season:"2016 – 2017", winner:"Lamberti",  pts:"72pt"},
+  {season:"2015 – 2016", winner:"Crobu",     pts:"34pt", note:"a pari punti con Cataldo"},
+];
+
+/* ── Calendario 2026-2027 ── */
+const CAL_NEXT = [
+  {g:1, data:"2026-09-26"},{g:2, data:"2026-10-10"},{g:3, data:"2026-10-24"},
+  {g:4, data:"2026-11-07"},{g:5, data:"2026-11-21"},{g:6, data:"2026-12-05"},
+  {g:7, data:"2026-12-19"},{g:8, data:"2027-01-09"},{g:9, data:"2027-01-23"},
+  {g:10,data:"2027-02-13"},{g:11,data:"2027-02-27"},{g:12,data:"2027-03-06"},
+];
+
+/* ═══════ NAVIGAZIONE PAGINE ═══════ */
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+
+  const subtitle    = document.getElementById('main-subtitle');
+  const pdfBtn      = document.getElementById('pdf-btn-main');
+  const btnNext     = document.getElementById('btn-next');
+  const btnArch     = document.getElementById('btn-archivio');
+  const btnHome     = document.getElementById('btn-home');
+  const btnAdmin    = document.getElementById('btn-admin-header');
+  const adminLogout = document.getElementById('admin-logout');
+  const adminUnlocked = btnAdmin.style.display !== 'none';
+  [btnNext,btnArch].forEach(b=>b.classList.remove('active-page'));
+
+  if(name==='current'){
+    subtitle.textContent='Stagione 2025 – 2026';
+    pdfBtn.style.display='';
+    btnNext.style.display='';
+    btnArch.style.display='';
+    btnAdmin.style.display = adminUnlocked ? '' : 'none';
+    adminLogout.style.display = adminUnlocked ? '' : 'none';
+    btnHome.classList.remove('visible');
+  } else if(name==='next'){
+    subtitle.textContent='Stagione 2026 – 2027';
+    pdfBtn.style.display='none';
+    btnNext.style.display='none';
+    btnArch.style.display='none';
+    btnAdmin.style.display='none';
+    adminLogout.style.display='none';
+    btnHome.classList.add('visible');
+    renderNext();
+  } else if(name==='archivio'){
+    subtitle.textContent='Archivio Stagioni';
+    pdfBtn.style.display='none';
+    btnNext.style.display='none';
+    btnArch.style.display='none';
+    btnAdmin.style.display='none';
+    adminLogout.style.display='none';
+    btnHome.classList.add('visible');
+    renderArchivio();
+  }
+}
+window.showPage = showPage;
+
+/* ═══════ SEED + LISTENERS ═══════ */
+async function seedIfEmpty(){
+  const snap = await getDocs(winsCol);
+  if(!snap.empty) return;
+  const sw=[
+    {g:1,p:"Lamberti"},{g:1,p:"Sgambetterra"},{g:1,p:"Cataldo"},
+    {g:2,p:"Crobu"},{g:2,p:"Lamberti"},{g:2,p:"Lamberti"},
+    {g:3,p:"Ciconte"},{g:3,p:"Sgambetterra"},{g:3,p:"Cataldo"},
+    {g:4,p:"Cataldo"},{g:4,p:"Crobu"},{g:4,p:"Cataldo"},
+    {g:5,p:"Lamberti"},{g:5,p:"Lamberti"},{g:5,p:"Lamberti"},
+    {g:6,p:"Sgambetterra"},{g:6,p:"Crobu"},{g:6,p:"Lamberti"},
+    {g:7,p:"Lamberti"},{g:7,p:"Cataldo"},{g:7,p:"Cataldo"},
+    {g:8,p:"Cataldo"},{g:8,p:"Crobu"},{g:8,p:"Crobu"},{g:8,p:"Lamberti"},
+    {g:9,p:"Lamberti"},{g:9,p:"Cataldo"},{g:9,p:"Crobu"},
+    {g:10,p:"Lamberti"},{g:10,p:"Cataldo"},{g:10,p:"Ciconte"},
+    {g:11,p:"Sgambetterra"},{g:11,p:"Lamberti"},{g:11,p:"Crobu"},
+    {g:12,p:"Crobu"},{g:12,p:"Crobu"},{g:12,p:"Sgambetterra"},
+  ];
+  const sf=[
+    {g:1,p:"Cataldo"},{g:1,p:"Ciconte"},{g:1,p:"Lamberti"},
+    {g:2,p:"Cataldo"},{g:2,p:"Sgambetterra"},{g:2,p:"Crobu"},
+    {g:3,p:"Crobu"},{g:3,p:"Cataldo"},{g:3,p:"Ciconte"},
+    {g:4,p:"Lamberti"},{g:4,p:"Cataldo"},{g:4,p:"Crobu"},
+    {g:5,p:"Cataldo"},{g:5,p:"Sgambetterra"},{g:5,p:"Crobu"},
+    {g:6,p:"Crobu"},{g:6,p:"Ciconte"},{g:6,p:"Crobu"},
+    {g:7,p:"Ciconte"},{g:7,p:"Lamberti"},{g:7,p:"Sgambetterra"},
+    {g:8,p:"Crobu"},{g:8,p:"Cataldo"},{g:8,p:"Lamberti"},{g:8,p:"Crobu"},
+    {g:9,p:"Crobu"},{g:9,p:"Crobu"},{g:9,p:"Sgambetterra"},
+    {g:10,p:"Sgambetterra"},{g:10,p:"Lamberti"},{g:10,p:"Cataldo"},
+    {g:11,p:"Lamberti"},{g:11,p:"Ciconte"},{g:11,p:"Lamberti"},
+    {g:12,p:"Ciconte"},{g:12,p:"Ciconte"},{g:12,p:"Crobu"},
+  ];
+  const sc={dates:["2025-09-27","2025-10-11","2025-11-15","2025-11-29",
+    "2025-12-13","2025-12-20","2026-01-10","2026-01-17","2026-01-24",
+    "2026-02-21","2026-02-28","2026-03-14","","",""]};
+  for(const w of sw) await addDoc(winsCol,  {...w,_secret:"PP2627"});
+  for(const f of sf) await addDoc(finalsCol,{...f,_secret:"PP2627"});
+  await setDoc(calDoc,{...sc,_secret:"PP2627"});
+}
+
+function startListeners(){
+  onSnapshot(winsCol, snap=>{
+    wins=[];
+    snap.forEach(d=>wins.push({...d.data(),_id:d.id}));
+    wins.sort((a,b)=>a.g-b.g);
+    renderAll();
+  });
+  onSnapshot(finalsCol, snap=>{
+    finals=[];
+    snap.forEach(d=>finals.push({...d.data(),_id:d.id}));
+    finals.sort((a,b)=>a.g-b.g);
+    renderAll();
+  });
+  onSnapshot(calDoc, snap=>{
+    if(snap.exists()){
+      const dates=snap.data().dates||[];
+      calendario=dates.map((data,i)=>({g:i+1,data}));
+    }
+    renderCalendario();
+  });
+}
+
+/* ═══════ ADMIN ═══════ */
+async function addMatch(){
+  const g=parseInt(document.getElementById('in-giornata').value)||1;
+  const w=document.getElementById('in-winner').value;
+  const f=document.getElementById('in-final').value;
+  if(w==='\u2014'&&f==='\u2014'){alert('Seleziona almeno un vincitore o un finalista');return;}
+  if(w!=='\u2014') await addDoc(winsCol,  {g,p:w,_secret:"PP2627"});
+  if(f!=='\u2014') await addDoc(finalsCol,{g,p:f,_secret:"PP2627"});
+}
+async function delEntry(list,docId){
+  await deleteDoc(doc(db,list,docId));
+}
+async function saveCalDate(idx,val){
+  const dates=calendario.map(c=>c.data);
+  dates[idx]=val||"";
+  await setDoc(calDoc,{dates,_secret:"PP2627"});
+}
+async function clearCalDate(idx){
+  document.getElementById('cal-input-'+idx).value="";
+  await saveCalDate(idx,"");
+}
+
+/* ═══════ STATS ═══════ */
+function computeStats(){
+  const s={};
+  PLAYERS.forEach(p=>s[p]={name:p,punti:0,wins:0,finali:0});
+  wins.forEach(w=>{if(s[w.p]){s[w.p].punti+=5;s[w.p].wins+=1;}});
+  finals.forEach(f=>{if(s[f.p])s[f.p].finali+=1;});
+  return Object.values(s);
+}
+
+/* ═══════ HELPERS ═══════ */
+function fmtDate(iso){
+  if(!iso)return null;
+  const[y,m,d]=iso.split('-');
+  const mesi=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+  return `${parseInt(d)} ${mesi[parseInt(m)-1]} ${y}`;
+}
+function calStatus(iso){
+  if(!iso)return'future';
+  const today=new Date();today.setHours(0,0,0,0);
+  const d=new Date(iso);d.setHours(0,0,0,0);
+  return d<today?'played':'upcoming';
+}
+function findNext(cal){
+  const today=new Date();today.setHours(0,0,0,0);
+  let idx=-1,minDiff=Infinity;
+  cal.forEach((c,i)=>{
+    if(!c.data)return;
+    const d=new Date(c.data);d.setHours(0,0,0,0);
+    const diff=d-today;
+    if(diff>=0&&diff<minDiff){minDiff=diff;idx=i;}
+  });
+  return idx;
+}
+function boardHTML(items, key, unit){
+  return items.map((p,i)=>`
+    <div class="row r${i+1}${p[key]===0?' empty-rank':''}">
+      <div class="rank">${i===0?'&#9819;':i+1}</div>
+      <div class="pname">${p.name}</div>
+      <div class="pscore">${p[key]}<small> ${unit}</small></div>
+    </div>`).join('');
+}
+
+/* ═══════ RENDER STAGIONE CORRENTE ═══════ */
+function renderBoard(el,key,unit){
+  const data=computeStats().sort((a,b)=>b[key]-a[key]||b.punti-a.punti);
+  el.innerHTML=boardHTML(data,key,unit);
+}
+function renderStats(){
+  const data=computeStats().sort((a,b)=>b.punti-a.punti);
+  document.getElementById('stats-body').innerHTML=data.map(p=>`
+    <tr><td>${p.name}</td><td>${p.punti}</td><td>${p.wins}</td><td>${p.finali}</td></tr>`).join('');
+}
+function renderLog(){
+  document.getElementById('match-count').textContent=wins.length+' vittorie, '+finals.length+' finali';
+  const log=document.getElementById('match-log');
+  if(!wins.length&&!finals.length){log.innerHTML='<div class="empty">Nessun dato registrato</div>';return;}
+  let html='';
+  [...wins].reverse().forEach(w=>{html+=`<div class="log-item">
+    <div><span class="log-meta">G${w.g}</span> &nbsp;<span class="log-win">&#127942; ${w.p}</span></div>
+    <button class="del" onclick="window._del('wins','${w._id}')">&#10005;</button></div>`;});
+  [...finals].reverse().forEach(f=>{html+=`<div class="log-item">
+    <div><span class="log-meta">G${f.g}</span> &nbsp;<span class="log-run">&#129352; ${f.p} (finale)</span></div>
+    <button class="del" onclick="window._del('finals','${f._id}')">&#10005;</button></div>`;});
+  log.innerHTML=html;
+}
+function renderCalendario(){
+  const nextIdx=findNext(calendario);
+  document.getElementById('cal-view').innerHTML=calendario.map((c,i)=>{
+    const st=c.data?calStatus(c.data):'future';
+    const isNext=i===nextIdx;
+    const badge=isNext?'<span class="cal-badge badge-next">PROSSIMA</span>'
+      :st==='played'?'<span class="cal-badge badge-played">DISPUTATA</span>'
+      :'<span class="cal-badge badge-future">IN PROGRAMMA</span>';
+    return`<div class="cal-row ${st==='played'?'played':''} ${isNext?'next':''}">
+      <div class="cal-num">${c.g}</div>
+      <div class="cal-info">
+        <div class="cal-label">Giornata ${c.g}</div>
+        <div class="cal-date ${!c.data?'tbd':''}">${c.data?fmtDate(c.data):'Data da definire'}</div>
+      </div>${badge}</div>`;
+  }).join('');
+  const ca=document.getElementById('cal-admin');
+  if(ca)ca.innerHTML=calendario.map((c,i)=>`
+    <div class="cal-edit-row">
+      <div class="cal-num" style="font-size:14px">${c.g}</div>
+      <input type="date" id="cal-input-${i}" value="${c.data||''}" onchange="window._saveCalDate(${i},this.value)">
+      <button class="btn-sm btn-save" onclick="window._saveCalDate(${i},document.getElementById('cal-input-${i}').value)">&#10003;</button>
+      <button class="btn-sm btn-clear" onclick="window._clearCalDate(${i})">&#10005;</button>
+    </div>`).join('');
+}
+function renderAll(){
+  renderBoard(document.getElementById('board-punti'),'punti','pt');
+  renderBoard(document.getElementById('board-finali'),'finali','fin');
+  renderStats();renderLog();renderCalendario();
+}
+
+/* ═══════ RENDER 2026-2027 ═══════ */
+function renderNext(){
+  const nextIdx=findNext(CAL_NEXT);
+  document.getElementById('cal-next').innerHTML=CAL_NEXT.map((c,i)=>{
+    const isNext=i===nextIdx;
+    const badge=isNext
+      ?'<span class="cal-badge badge-next">PROSSIMA</span>'
+      :'<span class="cal-badge badge-future">IN PROGRAMMA</span>';
+    return`<div class="cal-row ${isNext?'next':''}">
+      <div class="cal-num">${c.g}</div>
+      <div class="cal-info">
+        <div class="cal-label">Giornata ${c.g}</div>
+        <div class="cal-date">${fmtDate(c.data)}</div>
+      </div>${badge}</div>`;
+  }).join('');
+}
+
+/* ═══════ RENDER PALMARÈS ═══════ */
+function renderPalmares(){
+  const ALL_PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
+
+  // Titoli assoluti
+  const counts = {};
+  ALL_PLAYERS.forEach(p=>counts[p]=0);
+  PALMARES.forEach(p=>{ if(p.winner) counts[p.winner] = (counts[p.winner]||0) + 1; });
+
+  // Anelli: Crobu ha già il primo (primo a 3 titoli assoluti, con 2021-22)
+  const rings = {Cataldo:0,Ciconte:0,Crobu:1,Lamberti:0,Sgambetterra:0};
+
+  // Seconda classifica: dal 2022-23 in poi
+  const SECOND_ERA = ["2022 – 2023","2023 – 2024","2024 – 2025","2025 – 2026"];
+  const counts2 = {};
+  ALL_PLAYERS.forEach(p=>counts2[p]=0);
+  PALMARES.forEach(p=>{ if(p.winner && SECOND_ERA.includes(p.season)) counts2[p.winner]++; });
+
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  const sorted2 = Object.entries(counts2).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+
+  const ringSymbol = `<span style="font-size:18px" title="Campione assoluto">💍</span>`;
+
+  const rankHTML = sorted.map(([name,n])=>`
+    <div class="row" style="margin-bottom:9px">
+      <div class="rank" style="font-size:16px;opacity:.4">${rings[name]>0?ringSymbol:'&#9824;'}</div>
+      <div class="pname">${name}</div>
+      <div class="pscore">${n}<small> titoli</small></div>
+    </div>`).join('');
+
+  const rank2HTML = sorted2.map(([name,n])=>`
+    <div class="row" style="margin-bottom:9px">
+      <div class="rank" style="font-size:16px;opacity:.4">&#9824;</div>
+      <div class="pname">${name}</div>
+      <div class="pscore">${n}<small style="font-size:11px"> / 3</small></div>
+    </div>`).join('');
+
+  const listHTML = PALMARES.map((p,i)=>`
+    <div class="palmares-row ${i===0?'current-season':''}">
+      <div>
+        <div class="pal-season">${p.season}</div>
+        <div class="pal-winner">&#127942; ${p.winner}</div>
+      </div>
+      <div class="pal-right">
+        <div class="pal-pts">${p.pts||''}</div>
+        ${p.note?`<div class="pal-note">${p.note}</div>`:''}
+      </div>
+    </div>`).join('');
+
+  document.getElementById('palmares-list').innerHTML = `
+    <div class="board-title" style="margin-top:0">Classifica Titoli</div>
+    ${rankHTML}
+    <div class="board-title" style="margin-top:28px">&#128081; Corsa al Secondo Anello</div>
+    <p class="hint" style="text-align:center;margin-bottom:12px">Chi vince 3 tornei conquista il prossimo anello o medaglia</p>
+    ${rank2HTML}
+    <div class="board-title" style="margin-top:28px">Albo d'Oro</div>
+    <div style="border-radius:12px;border:1px solid rgba(212,175,55,.15);overflow:hidden;margin-bottom:24px">
+      ${listHTML}
+    </div>`;
+}
+
+/* ═══════ RENDER ARCHIVIO ═══════ */
+let openSeason=null;
+function renderArchivio(){
+  const picker=document.getElementById('arch-picker');
+  if(picker.innerHTML!=='') return; // già renderizzato
+  picker.innerHTML=SEASONS.map(s=>`
+    <div class="season-card" id="sc-${s.id}" onclick="window._archToggle('${s.id}')">
+      <div>
+        <div class="sc-year">${s.label}</div>
+        <div class="sc-sub">${s.note}</div>
+      </div>
+      <span class="sc-arrow">&#9654;</span>
+    </div>
+    <div class="season-detail" id="sd-${s.id}"></div>
+  `).join('');
+}
+function archToggle(id){
+  // Chiudi quello aperto (se diverso)
+  if(openSeason && openSeason!==id){
+    document.getElementById('sd-'+openSeason).classList.remove('active');
+    document.getElementById('sd-'+openSeason).innerHTML='';
+    document.getElementById('sc-'+openSeason).classList.remove('open');
+  }
+  const card=document.getElementById('sc-'+id);
+  const detail=document.getElementById('sd-'+id);
+  if(openSeason===id){
+    // Chiudi
+    detail.classList.remove('active');
+    detail.innerHTML='';
+    card.classList.remove('open');
+    openSeason=null;
+    return;
+  }
+  openSeason=id;
+  card.classList.add('open');
+  const s=SEASONS.find(x=>x.id===id);
+
+  let detailHTML = '';
+
+  if(s.soloVincitore){
+    detailHTML = `<div class="arch-section-gap">
+      <div class="board-title">Stagione ${s.label}</div>
+      <div class="row r1" style="margin-bottom:9px">
+        <div class="rank">&#9819;</div>
+        <div class="pname">Cataldo</div>
+        <div class="pscore"><small>vincitore</small></div>
+      </div>
+      <p class="hint" style="text-align:center">Dati completi non disponibili per questa stagione.</p>
+    </div>`;
+  } else {
+    const byPunti=[...s.players].map(p=>({name:p,val:s.punti[p]||0,punti:s.punti[p]||0}))
+      .sort((a,b)=>b.val-a.val);
+
+    detailHTML += `<div class="arch-section-gap">
+      <div class="board-title">Classifica Punti</div>
+      ${boardHTML(byPunti,'val','pt')}
+    </div>`;
+
+    if(!s.noFinali){
+      const byFinali=[...s.players].map(p=>({name:p,val:s.finali[p]||0,punti:s.punti[p]||0}))
+        .sort((a,b)=>b.val-a.val||b.punti-a.punti);
+      detailHTML += `<div class="arch-section-gap">
+        <div class="board-title">Classifica Finali</div>
+        ${boardHTML(byFinali,'val','fin')}
+      </div>`;
+    } else {
+      detailHTML += `<p class="hint" style="text-align:center;margin-top:16px">Dati finali non disponibili per questa stagione.${s.note2?' '+s.note2:''}</p>`;
+    }
+
+    const statsRows=[...s.players].map(p=>({
+      name:p, punti:s.punti[p]||0, wins:Math.round((s.punti[p]||0)/5), finali:s.noFinali?'—':s.finali[p]||0
+    })).sort((a,b)=>b.punti-a.punti);
+    detailHTML += `<div class="arch-section-gap">
+      <div class="board-title">Statistiche</div>
+      <div class="stats-grid" style="margin-bottom:16px"><table>
+        <thead><tr><th>Giocatore</th><th>Punti</th><th>Vittorie</th>${s.noFinali?'':'<th>Finali</th>'}</tr></thead>
+        <tbody>${statsRows.map(p=>`
+          <tr><td>${p.name}</td><td>${p.punti}</td><td>${p.wins}</td>${s.noFinali?'':'<td>'+p.finali+'</td>'}</tr>
+        `).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+  detail.innerHTML = detailHTML;
+  detail.classList.add('active');
+  setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+/* ═══════ PDF ═══════ */
+function generatePDF(){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,now=new Date();
+  const dateStr=now.toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
+  const timeStr=now.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const stats=computeStats();
+  const allG=[...wins.map(w=>w.g),...finals.map(f=>f.g)];
+  const giornate=allG.length?Math.max(...allG):0;
+  const GOLD=[150,120,30],FELT=[10,61,46],INK=[20,20,20],LIGHT=[245,240,225];
+  doc.setFillColor(...FELT);doc.rect(0,0,W,42,'F');
+  doc.setTextColor(212,175,55);doc.setFont('times','bold');doc.setFontSize(28);
+  doc.text('POKER PALACE',W/2,20,{align:'center'});
+  doc.setFontSize(12);doc.setFont('times','italic');doc.setTextColor(...LIGHT);
+  doc.text('Stagione 2025 - 2026',W/2,29,{align:'center'});
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.text(`Report del ${dateStr} alle ${timeStr}  -  Giornate: ${giornate}  -  Vittorie: ${wins.length}  -  Finali: ${finals.length}`,W/2,37,{align:'center'});
+  let y=56;
+  const dT=(t)=>{doc.setFillColor(...GOLD);doc.rect(14,y-5,W-28,8,'F');
+    doc.setTextColor(255,255,255);doc.setFont('times','bold');doc.setFontSize(12);
+    doc.text(t,18,y);y+=12;};
+  const tR=(cells,widths,opts={})=>{const x0=14;let x=x0;
+    if(opts.fill){doc.setFillColor(...opts.fill);doc.rect(x0,y-5.5,W-28,8,'F');}
+    doc.setFont('helvetica',opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
+    doc.setTextColor(...(opts.color||INK));
+    cells.forEach((c,i)=>{doc.text(String(c),x+2,y,{align:opts.align?.[i]||'left'});x+=widths[i];});y+=8;};
+  const wP=[14,90,40,38];
+  dT('CLASSIFICA PUNTI');
+  tR(['#','Giocatore','Punti','Vittorie'],wP,{fill:FELT,color:[212,175,55],bold:true});
+  [...stats].sort((a,b)=>b.punti-a.punti||b.wins-a.wins).forEach((p,i)=>
+    tR([i+1,p.name,p.punti,p.wins],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
+  y+=8;
+  dT('CLASSIFICA FINALI');
+  tR(['#','Giocatore','Finali','Vittorie'],wP,{fill:FELT,color:[212,175,55],bold:true});
+  [...stats].sort((a,b)=>b.finali-a.finali||b.punti-a.punti).forEach((p,i)=>
+    tR([i+1,p.name,p.finali,p.wins],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
+  y+=8;
+  const wS=[58,34,34,40];
+  dT('STATISTICHE COMPLETE');
+  tR(['Giocatore','Punti','Vittorie','Finali'],wS,{fill:FELT,color:[212,175,55],bold:true});
+  [...stats].sort((a,b)=>b.punti-a.punti).forEach((p,i)=>
+    tR([p.name,p.punti,p.wins,p.finali],wS,{fill:i%2?[245,242,232]:[255,255,255]}));
+  doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','italic');
+  doc.text('Generato da Poker Palace - 5 punti per partita vinta, 1 punto per finale raggiunta',W/2,288,{align:'center'});
+  doc.save(`PokerPalace_G${giornate}_${now.toISOString().slice(0,10)}.pdf`);
+}
+
+/* ═══════ ADMIN PIN ═══════ */
+const ADMIN_PIN='2627';
+let tapCount=0,tapTimer=null;
+document.getElementById('crest-tap').addEventListener('click',()=>{
+  tapCount++;clearTimeout(tapTimer);
+  tapTimer=setTimeout(()=>{tapCount=0;},2000);
+  if(tapCount>=5){tapCount=0;
+    const pin=prompt('PIN Admin:');
+    if(pin===ADMIN_PIN)unlockAdmin();
+    else if(pin!==null)alert('PIN errato');}
+});
+function unlockAdmin(){
+  document.getElementById('btn-admin-header').style.display='';
+  document.getElementById('admin-logout').style.display='';
+  document.getElementById('admin-logout').dataset.was='';
+  document.getElementById('admin-badge').textContent='\u2699 Modalit\u00e0 Admin';
+}
+function activateAdminTab(){
+  document.querySelectorAll('#page-current .tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#page-current .view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('admin').classList.add('active');
+}
+function logoutAdmin(){
+  document.querySelectorAll('#page-current .tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#page-current .view').forEach(x=>x.classList.remove('active'));
+  document.querySelector('[data-view="punti"]').classList.add('active');
+  document.getElementById('punti').classList.add('active');
+  document.getElementById('btn-admin-header').style.display='none';
+  document.getElementById('admin-logout').style.display='none';
+}
+
+/* ═══════ ESPONI AL DOM ═══════ */
+window._del          = delEntry;
+window._saveCalDate  = saveCalDate;
+window._clearCalDate = clearCalDate;
+window.addMatch      = addMatch;
+window.generatePDF   = generatePDF;
+window.logoutAdmin   = logoutAdmin;
+window.activateAdminTab = activateAdminTab;
+window._archToggle   = archToggle;
+
+/* ═══════ SETUP ═══════ */
+function initSelects(){
+  const opts='<option>\u2014</option>'+PLAYERS.map(p=>`<option>${p}</option>`).join('');
+  document.getElementById('in-winner').innerHTML=opts;
+  document.getElementById('in-final').innerHTML=opts;
+}
+initSelects();
+renderPalmares();
+seedIfEmpty().then(()=>startListeners()).catch(err=>{
+  console.warn('Firebase error:', err);
+  renderAll();
+});
+</script>
+
+<script>
+/* ═══════ TAB SETUP — fuori dal module per compatibilità Safari iOS ═══════ */
+(function(){
+  function setupTabs(){
+    var tabs = document.querySelectorAll('#page-current .tab');
+    tabs.forEach(function(t){
+      function handler(e){
+        e.preventDefault();
+        document.querySelectorAll('#page-current .tab').forEach(function(x){x.classList.remove('active');});
+        document.querySelectorAll('#page-current .view').forEach(function(x){x.classList.remove('active');});
+        t.classList.add('active');
+        var view = document.getElementById(t.dataset.view);
+        if(view) view.classList.add('active');
+      }
+      t.addEventListener('click', handler);
+      t.addEventListener('touchend', handler, {passive:false});
+    });
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', setupTabs);
+  } else {
+    setupTabs();
+  }
+})();
+</script>
+</body>
+</html>
