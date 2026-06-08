@@ -868,21 +868,21 @@ function generatePDF(){
     doc.setFont('helvetica',opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
     doc.setTextColor(...(opts.color||INK));
     cells.forEach((c,i)=>{doc.text(String(c),x+2,y,{align:opts.align?.[i]||'left'});x+=widths[i];});y+=8;};
-  const wP=[14,90,40,38];
+  const wP=[14,90,52];
   dT('CLASSIFICA PUNTI');
-  tR(['#','Giocatore','Punti','Vittorie'],wP,{fill:FELT,color:[212,175,55],bold:true});
+  tR(['#','Giocatore','Punti'],wP,{fill:FELT,color:[212,175,55],bold:true});
   [...stats].sort((a,b)=>b.punti-a.punti||b.finali-a.finali).forEach((p,i)=>
-    tR([i+1,p.name,p.punti,p.wins],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
+    tR([i+1,p.name,p.punti],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
   y+=8;
   dT('CLASSIFICA FINALI');
-  tR(['#','Giocatore','Finali','Vittorie'],wP,{fill:FELT,color:[212,175,55],bold:true});
+  tR(['#','Giocatore','Finali'],wP,{fill:FELT,color:[212,175,55],bold:true});
   [...stats].sort((a,b)=>b.finali-a.finali||b.punti-a.punti).forEach((p,i)=>
-    tR([i+1,p.name,p.finali,p.wins],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
+    tR([i+1,p.name,p.finali],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
   y+=8;
   const wS=[58,34,34,40];
   dT('STATISTICHE COMPLETE');
   tR(['Giocatore','Punti','Vittorie','Finali'],wS,{fill:FELT,color:[212,175,55],bold:true});
-  [...stats].sort((a,b)=>b.punti-a.punti).forEach((p,i)=>
+  [...stats].sort((a,b)=>b.punti-a.punti||b.finali-a.finali).forEach((p,i)=>
     tR([p.name,p.punti,p.wins,p.finali],wS,{fill:i%2?[245,242,232]:[255,255,255]}));
   doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','italic');
   doc.text('Generato da Poker Palace - 5 punti per partita vinta, 1 punto per finale raggiunta',W/2,288,{align:'center'});
