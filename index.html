@@ -274,7 +274,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
         <thead><tr><th>Giocatore</th><th>Punti</th><th>Vittorie</th><th>Finali</th></tr></thead>
         <tbody id="stats-body"></tbody>
       </table></div>
-      <p class="hint">Punti = 5 per ogni partita vinta. Finali = volte arrivato in finale.</p>
+      <p class="hint">Punti = 5 per ogni partita vinta. In caso di parità, vale la classifica finali.</p>
     </section>
     <section class="view" id="palmares">
       <div class="board-title">Palmarès</div>
@@ -327,7 +327,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v14</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v16</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -392,10 +392,9 @@ const SEASONS = [
   },
   {
     id:"1920", label:"2019 – 2020", note:"8 giornate · 5 giocatori",
-    players:["Benvenuto","Cataldo","Crobu","Lamberti","Sgambetterra"],
-    punti: {Benvenuto:15,Cataldo:25,Crobu:30,Lamberti:25,Sgambetterra:25},
-    finali:{Benvenuto:null,Cataldo:null,Crobu:null,Lamberti:null,Sgambetterra:null},
-    noFinali:true,
+    players:["Crobu","Cataldo","Lamberti","Sgambetterra","Benvenuto"],
+    punti: {Crobu:30,Cataldo:25,Lamberti:25,Sgambetterra:25,Benvenuto:15},
+    finali:{Lamberti:7,Crobu:6,Cataldo:5,Sgambetterra:4,Benvenuto:2},
   },
   {
     id:"1819", label:"2018 – 2019", note:"dati parziali",
@@ -624,11 +623,12 @@ function boardHTML(items, key, unit){
 
 /* ═══════ RENDER STAGIONE CORRENTE ═══════ */
 function renderBoard(el,key,unit){
-  const data=computeStats().sort((a,b)=>b[key]-a[key]||b.punti-a.punti);
+  // Classifica punti: tiebreaker finali. Classifica finali: tiebreaker punti.
+  const data=computeStats().sort((a,b)=>b[key]-a[key]||(key==='punti'?b.finali-a.finali:b.punti-a.punti));
   el.innerHTML=boardHTML(data,key,unit);
 }
 function renderStats(){
-  const data=computeStats().sort((a,b)=>b.punti-a.punti);
+  const data=computeStats().sort((a,b)=>b.punti-a.punti||b.finali-a.finali);
   document.getElementById('stats-body').innerHTML=data.map(p=>`
     <tr><td>${p.name}</td><td>${p.punti}</td><td>${p.wins}</td><td>${p.finali}</td></tr>`).join('');
 }
@@ -803,8 +803,8 @@ function archToggle(id){
       <p class="hint" style="text-align:center">Dati completi non disponibili per questa stagione.</p>
     </div>`;
   } else {
-    const byPunti=[...s.players].map(p=>({name:p,val:s.punti[p]||0,punti:s.punti[p]||0}))
-      .sort((a,b)=>b.val-a.val);
+    const byPunti=[...s.players].map(p=>({name:p,val:s.punti[p]||0,punti:s.punti[p]||0,finali:s.noFinali?0:s.finali[p]||0}))
+      .sort((a,b)=>b.val-a.val||(s.noFinali?0:b.finali-a.finali));
 
     detailHTML += `<div class="arch-section-gap">
       <div class="board-title">Classifica Punti</div>
@@ -824,7 +824,7 @@ function archToggle(id){
 
     const statsRows=[...s.players].map(p=>({
       name:p, punti:s.punti[p]||0, wins:Math.round((s.punti[p]||0)/5), finali:s.noFinali?'—':s.finali[p]||0
-    })).sort((a,b)=>b.punti-a.punti);
+    })).sort((a,b)=>b.punti-a.punti||(s.noFinali?0:(b.finali||0)-(a.finali||0)));
     detailHTML += `<div class="arch-section-gap">
       <div class="board-title">Statistiche</div>
       <div class="stats-grid" style="margin-bottom:16px"><table>
@@ -867,21 +867,21 @@ function generatePDF(){
     doc.setFont('helvetica',opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
     doc.setTextColor(...(opts.color||INK));
     cells.forEach((c,i)=>{doc.text(String(c),x+2,y,{align:opts.align?.[i]||'left'});x+=widths[i];});y+=8;};
-  const wP=[14,90,40,38];
+  const wP=[14,90,52];
   dT('CLASSIFICA PUNTI');
-  tR(['#','Giocatore','Punti','Vittorie'],wP,{fill:FELT,color:[212,175,55],bold:true});
-  [...stats].sort((a,b)=>b.punti-a.punti||b.wins-a.wins).forEach((p,i)=>
-    tR([i+1,p.name,p.punti,p.wins],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
+  tR(['#','Giocatore','Punti'],wP,{fill:FELT,color:[212,175,55],bold:true});
+  [...stats].sort((a,b)=>b.punti-a.punti||b.finali-a.finali).forEach((p,i)=>
+    tR([i+1,p.name,p.punti],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
   y+=8;
   dT('CLASSIFICA FINALI');
-  tR(['#','Giocatore','Finali','Vittorie'],wP,{fill:FELT,color:[212,175,55],bold:true});
+  tR(['#','Giocatore','Finali'],wP,{fill:FELT,color:[212,175,55],bold:true});
   [...stats].sort((a,b)=>b.finali-a.finali||b.punti-a.punti).forEach((p,i)=>
-    tR([i+1,p.name,p.finali,p.wins],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
+    tR([i+1,p.name,p.finali],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
   y+=8;
   const wS=[58,34,34,40];
   dT('STATISTICHE COMPLETE');
   tR(['Giocatore','Punti','Vittorie','Finali'],wS,{fill:FELT,color:[212,175,55],bold:true});
-  [...stats].sort((a,b)=>b.punti-a.punti).forEach((p,i)=>
+  [...stats].sort((a,b)=>b.punti-a.punti||b.finali-a.finali).forEach((p,i)=>
     tR([p.name,p.punti,p.wins,p.finali],wS,{fill:i%2?[245,242,232]:[255,255,255]}));
   doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','italic');
   doc.text('Generato da Poker Palace - 5 punti per partita vinta, 1 punto per finale raggiunta',W/2,288,{align:'center'});
