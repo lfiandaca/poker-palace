@@ -226,6 +226,28 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 .season-detail{display:none;margin-bottom:10px;animation:fade .35s ease}
 .season-detail.active{display:block}
 .arch-section-gap{margin-top:20px}
+
+/* ── Countdown 2026/2027 ── */
+.countdown{
+  margin:0 0 20px;padding:16px 18px;
+  border:1px solid rgba(212,175,55,.3);border-radius:16px;text-align:center;
+  background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(212,175,55,.02));
+  box-shadow:0 0 20px rgba(212,175,55,.07);
+}
+.cd-label{
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);opacity:.8;
+}
+.cd-clock{display:flex;justify-content:center;align-items:flex-start;gap:8px;margin-top:10px}
+.cd-unit{min-width:54px}
+.cd-num{
+  font-family:'JetBrains Mono',monospace;font-weight:800;font-size:clamp(22px,6.5vw,28px);
+  color:var(--gold-bright);line-height:1;
+}
+.cd-name{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;opacity:.5;margin-top:5px}
+.cd-sep{font-size:22px;color:var(--gold);opacity:.3;line-height:1.05}
+.cd-when{font-size:15px;font-style:italic;opacity:.6;margin-top:12px}
+.cd-live{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--gold-bright);padding:6px 0}
 </style>
 </head>
 <body>
@@ -254,6 +276,11 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
        PAGE: Stagione corrente 2025-2026
   ════════════════════════════════════════ -->
   <div class="page active" id="page-current">
+    <div class="countdown" id="countdown">
+      <div class="cd-label">All'inizio del Torneo 2026 &ndash; 2027</div>
+      <div class="cd-clock" id="cd-clock"></div>
+      <div class="cd-when">Sabato 26 settembre 2026, ore 17:00</div>
+    </div>
     <nav>
       <button class="tab active" data-view="punti"><span style="color:var(--suit-red)">&#9829;</span> Punti</button>
       <button class="tab" data-view="finali"><span style="color:var(--suit-red)">&#9830;</span> Finali</button>
@@ -332,7 +359,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v18</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v19</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -970,6 +997,52 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
     document.addEventListener('DOMContentLoaded', setupTabs);
   } else {
     setupTabs();
+  }
+})();
+
+/* ═══════ COUNTDOWN Torneo 2026-2027 ═══════ */
+(function(){
+  // Offset +02:00 esplicito: il 26/09/2026 l'Italia è ancora in ora legale (CEST).
+  // Senza offset il browser userebbe il fuso locale del device.
+  var START = new Date('2026-09-26T17:00:00+02:00');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function unit(v,label){
+    return '<div class="cd-unit"><div class="cd-num">'+v+'</div>'+
+           '<div class="cd-name">'+label+'</div></div>';
+  }
+
+  function tick(){
+    var box = document.getElementById('cd-clock');
+    if(!box) return;
+    var diff = START - Date.now();
+
+    if(diff <= 0){
+      box.innerHTML = '<div class="cd-live">&#9824; Il torneo &egrave; iniziato &#9824;</div>';
+      return;
+    }
+    var s = Math.floor(diff/1000);
+    var d = Math.floor(s/86400);
+    var h = Math.floor(s%86400/3600);
+    var m = Math.floor(s%3600/60);
+    var sec = s%60;
+
+    box.innerHTML =
+      unit(d,'giorni')      + '<span class="cd-sep">:</span>' +
+      unit(pad(h),'ore')    + '<span class="cd-sep">:</span>' +
+      unit(pad(m),'min')    + '<span class="cd-sep">:</span>' +
+      unit(pad(sec),'sec');
+  }
+
+  function startCountdown(){
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', startCountdown);
+  } else {
+    startCountdown();
   }
 })();
 </script>
