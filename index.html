@@ -255,16 +255,15 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
   <header>
     <div class="crest" id="crest-tap"><span class="s-black">&#9824;</span> <span class="s-red">&#9829;</span> <span class="s-red">&#9830;</span> <span class="s-black">&#9827;</span></div>
     <h1>Poker Palace</h1>
-    <div class="subtitle" id="main-subtitle">Stagione 2025 &ndash; 2026</div>
+    <div class="subtitle" id="main-subtitle">Stagione 2026 &ndash; 2027</div>
     <div class="rule"></div>
     <div class="header-btns">
       <button class="pdf-btn" id="pdf-btn-main" onclick="generatePDF()"><span style="color:var(--suit-red)">&#9829;</span> Salva PDF</button>
-      <button class="nav-btn" id="btn-next" onclick="showPage('next')">&#127183; 2026–2027</button>
       <button class="nav-btn" id="btn-archivio" onclick="showPage('archivio')">&#128218; Archivio</button>
       <button class="nav-btn" id="btn-admin-header" onclick="showPage('current');activateAdminTab()" style="display:none">&#9881; Admin</button>
     </div>
     <div style="margin-top:10px;text-align:center">
-      <button class="home-btn" id="btn-home" onclick="showPage('current')">&#8592; Home 2025–2026</button>
+      <button class="home-btn" id="btn-home" onclick="showPage('current')">&#8592; Home</button>
     </div>
     <div id="admin-logout" style="display:none;margin-top:10px">
       <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--gold);opacity:.7">&#128274; Modalità Admin attiva &nbsp;</span>
@@ -282,13 +281,13 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
       <div class="cd-when">Sabato 26 settembre 2026, ore 17:00</div>
     </div>
     <nav>
-      <button class="tab active" data-view="punti"><span style="color:var(--suit-red)">&#9829;</span> Punti</button>
+      <button class="tab" data-view="punti"><span style="color:var(--suit-red)">&#9829;</span> Punti</button>
       <button class="tab" data-view="finali"><span style="color:var(--suit-red)">&#9830;</span> Finali</button>
-      <button class="tab" data-view="calendario">&#128197; Cal.</button>
+      <button class="tab active" data-view="calendario">&#128197; Cal.</button>
       <button class="tab" data-view="stats"><span class="s-blk">&#9824;</span> Stats</button>
       <button class="tab" data-view="palmares">&#127942; Palm.</button>
     </nav>
-    <section class="view active" id="punti">
+    <section class="view" id="punti">
       <div class="board-title">Classifica Punti</div>
       <div id="board-punti"></div>
     </section>
@@ -296,7 +295,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
       <div class="board-title">Classifica Finali</div>
       <div id="board-finali"></div>
     </section>
-    <section class="view" id="calendario">
+    <section class="view active" id="calendario">
       <div class="board-title">Calendario Torneo</div>
       <div class="cal-grid" id="cal-view"></div>
     </section>
@@ -322,7 +321,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
       <div class="card">
         <h3>Registra una partita</h3>
         <label>Giornata</label>
-        <input type="number" id="in-giornata" min="1" value="13">
+        <input type="number" id="in-giornata" min="1" value="1">
         <div class="duo">
           <div><label>&#127942; Ha vinto (+5)</label><select id="in-winner"></select></div>
           <div><label>&#129352; In finale (+1)</label><select id="in-final"></select></div>
@@ -338,19 +337,6 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
   </div>
 
   <!-- ═══════════════════════════════════════
-       PAGE: Prossima stagione 2026-2027
-  ════════════════════════════════════════ -->
-  <div class="page" id="page-next">
-    <div class="coming-banner">
-      <div class="icon">&#127183;</div>
-      <h2>Stagione in arrivo</h2>
-      <p>Il torneo inizia a settembre 2026.<br>Il calendario è già definito — ci vediamo al tavolo.</p>
-    </div>
-    <div class="board-title">Calendario Torneo</div>
-    <div class="cal-grid" id="cal-next"></div>
-  </div>
-
-  <!-- ═══════════════════════════════════════
        PAGE: Archivio
   ════════════════════════════════════════ -->
   <div class="page" id="page-archivio">
@@ -359,7 +345,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v20</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v22</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -367,7 +353,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc,
-         onSnapshot, setDoc, getDocs }
+         onSnapshot, setDoc, getDoc }
   from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 /* ── Firebase ── */
@@ -381,14 +367,23 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const winsCol   = collection(db,'wins');
-const finalsCol = collection(db,'finals');
-const calDoc    = doc(db,'meta','calendario');
+const winsCol   = collection(db,'wins_2627');
+const finalsCol = collection(db,'finals_2627');
+const calDoc    = doc(db,'meta','calendario_2627');
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
 let wins=[], finals=[];
-let calendario = Array.from({length:15},(_,i)=>({g:i+1,data:""}));
+
+/* ── Calendario 2026-2027 (12 giornate) ── */
+const CAL_NEXT = [
+  {g:1, data:"2026-09-26"},{g:2, data:"2026-10-10"},{g:3, data:"2026-10-24"},
+  {g:4, data:"2026-11-07"},{g:5, data:"2026-11-21"},{g:6, data:"2026-12-05"},
+  {g:7, data:"2026-12-19"},{g:8, data:"2027-01-09"},{g:9, data:"2027-01-23"},
+  {g:10,data:"2027-02-13"},{g:11,data:"2027-02-27"},{g:12,data:"2027-03-06"},
+];
+// Init locale dal calendario noto (offline-friendly; Firestore lo sovrascrive se presente)
+let calendario = CAL_NEXT.map(c=>({g:c.g,data:c.data}));
 
 /* ── Dati storici archivio ── */
 const SEASONS = [
@@ -480,14 +475,6 @@ const PALMARES = [
   {season:"2015 – 2016", winner:"Crobu",     note:"a pari punti con Cataldo, maggior numero di finali"},
 ];
 
-/* ── Calendario 2026-2027 ── */
-const CAL_NEXT = [
-  {g:1, data:"2026-09-26"},{g:2, data:"2026-10-10"},{g:3, data:"2026-10-24"},
-  {g:4, data:"2026-11-07"},{g:5, data:"2026-11-21"},{g:6, data:"2026-12-05"},
-  {g:7, data:"2026-12-19"},{g:8, data:"2027-01-09"},{g:9, data:"2027-01-23"},
-  {g:10,data:"2027-02-13"},{g:11,data:"2027-02-27"},{g:12,data:"2027-03-06"},
-];
-
 /* ═══════ NAVIGAZIONE PAGINE ═══════ */
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -495,35 +482,23 @@ function showPage(name){
 
   const subtitle    = document.getElementById('main-subtitle');
   const pdfBtn      = document.getElementById('pdf-btn-main');
-  const btnNext     = document.getElementById('btn-next');
   const btnArch     = document.getElementById('btn-archivio');
   const btnHome     = document.getElementById('btn-home');
   const btnAdmin    = document.getElementById('btn-admin-header');
   const adminLogout = document.getElementById('admin-logout');
   const adminUnlocked = btnAdmin.style.display !== 'none';
-  [btnNext,btnArch].forEach(b=>b.classList.remove('active-page'));
+  btnArch.classList.remove('active-page');
 
   if(name==='current'){
-    subtitle.textContent='Stagione 2025 – 2026';
+    subtitle.textContent='Stagione 2026 – 2027';
     pdfBtn.style.display='';
-    btnNext.style.display='';
     btnArch.style.display='';
     btnAdmin.style.display = adminUnlocked ? '' : 'none';
     adminLogout.style.display = adminUnlocked ? '' : 'none';
     btnHome.classList.remove('visible');
-  } else if(name==='next'){
-    subtitle.textContent='Stagione 2026 – 2027';
-    pdfBtn.style.display='none';
-    btnNext.style.display='none';
-    btnArch.style.display='none';
-    btnAdmin.style.display='none';
-    adminLogout.style.display='none';
-    btnHome.classList.add('visible');
-    renderNext();
   } else if(name==='archivio'){
     subtitle.textContent='Archivio Stagioni';
     pdfBtn.style.display='none';
-    btnNext.style.display='none';
     btnArch.style.display='none';
     btnAdmin.style.display='none';
     adminLogout.style.display='none';
@@ -535,42 +510,13 @@ window.showPage = showPage;
 
 /* ═══════ SEED + LISTENERS ═══════ */
 async function seedIfEmpty(){
-  const snap = await getDocs(winsCol);
-  if(!snap.empty) return;
-  const sw=[
-    {g:1,p:"Lamberti"},{g:1,p:"Sgambetterra"},{g:1,p:"Cataldo"},
-    {g:2,p:"Crobu"},{g:2,p:"Lamberti"},{g:2,p:"Lamberti"},
-    {g:3,p:"Ciconte"},{g:3,p:"Sgambetterra"},{g:3,p:"Cataldo"},
-    {g:4,p:"Cataldo"},{g:4,p:"Crobu"},{g:4,p:"Cataldo"},
-    {g:5,p:"Lamberti"},{g:5,p:"Lamberti"},{g:5,p:"Lamberti"},
-    {g:6,p:"Sgambetterra"},{g:6,p:"Crobu"},{g:6,p:"Lamberti"},
-    {g:7,p:"Lamberti"},{g:7,p:"Cataldo"},{g:7,p:"Cataldo"},
-    {g:8,p:"Cataldo"},{g:8,p:"Crobu"},{g:8,p:"Crobu"},{g:8,p:"Lamberti"},
-    {g:9,p:"Lamberti"},{g:9,p:"Cataldo"},{g:9,p:"Crobu"},
-    {g:10,p:"Lamberti"},{g:10,p:"Cataldo"},{g:10,p:"Ciconte"},
-    {g:11,p:"Sgambetterra"},{g:11,p:"Lamberti"},{g:11,p:"Crobu"},
-    {g:12,p:"Crobu"},{g:12,p:"Crobu"},{g:12,p:"Sgambetterra"},
-  ];
-  const sf=[
-    {g:1,p:"Cataldo"},{g:1,p:"Ciconte"},{g:1,p:"Lamberti"},
-    {g:2,p:"Cataldo"},{g:2,p:"Sgambetterra"},{g:2,p:"Crobu"},
-    {g:3,p:"Crobu"},{g:3,p:"Cataldo"},{g:3,p:"Ciconte"},
-    {g:4,p:"Lamberti"},{g:4,p:"Cataldo"},{g:4,p:"Crobu"},
-    {g:5,p:"Cataldo"},{g:5,p:"Sgambetterra"},{g:5,p:"Crobu"},
-    {g:6,p:"Crobu"},{g:6,p:"Ciconte"},{g:6,p:"Crobu"},
-    {g:7,p:"Ciconte"},{g:7,p:"Lamberti"},{g:7,p:"Sgambetterra"},
-    {g:8,p:"Crobu"},{g:8,p:"Cataldo"},{g:8,p:"Lamberti"},{g:8,p:"Crobu"},
-    {g:9,p:"Crobu"},{g:9,p:"Crobu"},{g:9,p:"Sgambetterra"},
-    {g:10,p:"Sgambetterra"},{g:10,p:"Lamberti"},{g:10,p:"Cataldo"},
-    {g:11,p:"Lamberti"},{g:11,p:"Ciconte"},{g:11,p:"Lamberti"},
-    {g:12,p:"Ciconte"},{g:12,p:"Ciconte"},{g:12,p:"Crobu"},
-  ];
-  const sc={dates:["2025-09-27","2025-10-11","2025-11-15","2025-11-29",
-    "2025-12-13","2025-12-20","2026-01-10","2026-01-17","2026-01-24",
-    "2026-02-21","2026-02-28","2026-03-14","","",""]};
-  for(const w of sw) await addDoc(winsCol,  {...w,_secret:"PP2627"});
-  for(const f of sf) await addDoc(finalsCol,{...f,_secret:"PP2627"});
-  await setDoc(calDoc,{...sc,_secret:"PP2627"});
+  // Stagione 2026-2027: nuova stagione, nessuna partita da seminare.
+  // Le partite si registrano dall'admin man mano che vengono giocate.
+  // Qui imposto solo il calendario di partenza se non è già su Firestore.
+  const snap = await getDoc(calDoc);
+  if(snap.exists()) return;
+  const dates = CAL_NEXT.map(c=>c.data);
+  await setDoc(calDoc,{dates,_secret:"PP2627"});
 }
 
 function startListeners(){
@@ -650,10 +596,10 @@ function findNext(cal){
   });
   return idx;
 }
-function boardHTML(items, key, unit){
+function boardHTML(items, key, unit, crown=true){
   return items.map((p,i)=>`
     <div class="row r${i+1}${p[key]===0?' empty-rank':''}">
-      <div class="rank">${i===0?'&#9819;':i+1}</div>
+      <div class="rank">${i===0&&crown?'&#9819;':i+1}</div>
       <div class="pname">${p.name}</div>
       <div class="pscore">${p[key]}<small> ${unit}</small></div>
     </div>`).join('');
@@ -663,7 +609,7 @@ function boardHTML(items, key, unit){
 function renderBoard(el,key,unit){
   // Classifica punti: tiebreaker finali. Classifica finali: tiebreaker punti.
   const data=computeStats().sort((a,b)=>b[key]-a[key]||(key==='punti'?b.finali-a.finali:b.punti-a.punti));
-  el.innerHTML=boardHTML(data,key,unit);
+  el.innerHTML=boardHTML(data,key,unit,false);
 }
 function renderStats(){
   const data=computeStats().sort((a,b)=>b.punti-a.punti||b.finali-a.finali);
@@ -677,10 +623,10 @@ function renderLog(){
   let html='';
   [...wins].reverse().forEach(w=>{html+=`<div class="log-item">
     <div><span class="log-meta">G${w.g}</span> &nbsp;<span class="log-win">&#127942; ${w.p}</span></div>
-    <button class="del" onclick="window._del('wins','${w._id}')">&#10005;</button></div>`;});
+    <button class="del" onclick="window._del('wins_2627','${w._id}')">&#10005;</button></div>`;});
   [...finals].reverse().forEach(f=>{html+=`<div class="log-item">
     <div><span class="log-meta">G${f.g}</span> &nbsp;<span class="log-run">&#129352; ${f.p} (finale)</span></div>
-    <button class="del" onclick="window._del('finals','${f._id}')">&#10005;</button></div>`;});
+    <button class="del" onclick="window._del('finals_2627','${f._id}')">&#10005;</button></div>`;});
   log.innerHTML=html;
 }
 function renderCalendario(){
@@ -711,23 +657,6 @@ function renderAll(){
   renderBoard(document.getElementById('board-punti'),'punti','pt');
   renderBoard(document.getElementById('board-finali'),'finali','fin');
   renderStats();renderLog();renderCalendario();
-}
-
-/* ═══════ RENDER 2026-2027 ═══════ */
-function renderNext(){
-  const nextIdx=findNext(CAL_NEXT);
-  document.getElementById('cal-next').innerHTML=CAL_NEXT.map((c,i)=>{
-    const isNext=i===nextIdx;
-    const badge=isNext
-      ?'<span class="cal-badge badge-next">PROSSIMA</span>'
-      :'<span class="cal-badge badge-future">IN PROGRAMMA</span>';
-    return`<div class="cal-row ${isNext?'next':''}">
-      <div class="cal-num">${c.g}</div>
-      <div class="cal-info">
-        <div class="cal-label">Giornata ${c.g}</div>
-        <div class="cal-date">${fmtDate(c.data)}</div>
-      </div>${badge}</div>`;
-  }).join('');
 }
 
 /* ═══════ RENDER PALMARÈS ═══════ */
@@ -893,7 +822,7 @@ function generatePDF(){
   doc.setTextColor(212,175,55);doc.setFont('times','bold');doc.setFontSize(28);
   doc.text('POKER PALACE',W/2,20,{align:'center'});
   doc.setFontSize(12);doc.setFont('times','italic');doc.setTextColor(...LIGHT);
-  doc.text('Stagione 2025 - 2026',W/2,29,{align:'center'});
+  doc.text('Stagione 2026 - 2027',W/2,29,{align:'center'});
   doc.setFontSize(9);doc.setFont('helvetica','normal');
   doc.text(`Report del ${dateStr} alle ${timeStr}  -  Giornate: ${giornate}  -  Vittorie: ${wins.length}  -  Finali: ${finals.length}`,W/2,37,{align:'center'});
   let y=56;
@@ -975,6 +904,7 @@ function initSelects(){
 }
 initSelects();
 renderPalmares();
+renderAll();                       // render immediato dai dati locali (calendario da CAL_NEXT)
 seedIfEmpty().then(()=>startListeners()).catch(err=>{
   console.warn('Firebase error:', err);
   renderAll();
