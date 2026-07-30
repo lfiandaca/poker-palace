@@ -359,7 +359,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v19</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v20</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -392,6 +392,12 @@ let calendario = Array.from({length:15},(_,i)=>({g:i+1,data:""}));
 
 /* ── Dati storici archivio ── */
 const SEASONS = [
+  {
+    id:"2526", label:"2025 – 2026", note:"12 giornate · 5 giocatori",
+    players:["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"],
+    punti: {Cataldo:45, Ciconte:10, Crobu:45, Lamberti:60, Sgambetterra:25},
+    finali:{Cataldo:7,  Ciconte:7,  Crobu:11, Lamberti:7,  Sgambetterra:5},
+  },
   {
     id:"2425", label:"2024 – 2025", note:"10 giornate · 6 giocatori",
     players:["Benvenuto","Cataldo","Crobu","Lamberti","Sgambetterra","Ciconte"],
