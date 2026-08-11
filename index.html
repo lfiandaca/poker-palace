@@ -361,7 +361,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25.5</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25.6</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -1025,17 +1025,26 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
   audio.addEventListener('play',    paint);
   audio.addEventListener('playing', paint);
   audio.addEventListener('pause',   paint);
+  // Loop di sicurezza (su iOS l'attributo loop a volte non basta)
+  audio.addEventListener('ended', function(){ if(wantOn){ try{ audio.currentTime=0; }catch(_){} play(); } });
+
+  // Ripresa quando si torna sull'app (riapertura PWA / cambio scheda / focus):
+  // su iOS standalone la pagina viene "scongelata" e l'audio resta in pausa.
+  function resume(){ if(wantOn){ audio.muted=false; var p=audio.play(); if(p&&p.catch) p.catch(function(){}); } }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) resume(); });
+  window.addEventListener('pageshow', resume);
+  window.addEventListener('focus',   resume);
 
   // Tentativo di avvio all'apertura: su Android (PWA installata) di solito parte;
   // su iOS viene bloccato e riparte al primo tap qui sotto.
   play();
 
-  // ── Primo tap reale (no scroll) su QUALSIASI punto avvia la musica ──
+  // ── Primo tap reale (no scroll) su QUALSIASI punto avvia/rilancia la musica ──
   function inBtn(e){ return e.target && e.target.closest && e.target.closest('#music-toggle'); }
   function onTS(e){ if(inBtn(e))return; var t=e.touches&&e.touches[0]; tX=t?t.clientX:0; tY=t?t.clientY:0; moved=false; }
   function onTM(e){ var t=e.touches&&e.touches[0]; if(t&&(Math.abs(t.clientX-tX)>24||Math.abs(t.clientY-tY)>24)) moved=true; }
-  function onTE(e){ if(inBtn(e))return; if(moved)return; if(wantOn && audio.paused) play(); }
-  function onCL(e){ if(inBtn(e))return; if(wantOn && audio.paused) play(); }
+  function onTE(e){ if(inBtn(e))return; if(moved)return; if(wantOn) play(); }   // play() ripetuto è innocuo
+  function onCL(e){ if(inBtn(e))return; if(wantOn) play(); }
   document.addEventListener('touchstart', onTS, {capture:true, passive:true});
   document.addEventListener('touchmove',  onTM, {capture:true, passive:true});
   document.addEventListener('touchend',   onTE, {capture:true, passive:true});
