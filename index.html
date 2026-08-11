@@ -360,7 +360,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v24</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -1010,10 +1010,13 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
   if(!Ctx){ btn.style.display = 'none'; return; }   // browser senza Web Audio
 
   var ctx=null, gain=null, source=null, buffer=null;
-  var wantOn=true, playing=false, loading=false, pendingStart=false, lastTap=0;
+  var wantOn=true, loading=false, lastTap=0;
+  var tX=0, tY=0, moved=false;
 
+  // "in ascolto" = c'è una sorgente attiva, il contesto gira e il suono è voluto
+  function isPlaying(){ return !!source && !!ctx && ctx.state === 'running' && wantOn; }
   function paint(){
-    var silent = !playing || !wantOn;
+    var silent = !isPlaying();
     btn.innerHTML = silent ? OFF : ON;
     btn.classList.toggle('muted', silent);
   }
@@ -1023,76 +1026,95 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
       gain = ctx.createGain();
       gain.gain.value = wantOn ? VOL : 0;
       gain.connect(ctx.destination);
+      ctx.onstatechange = function(){
+        // iOS sospende/interrompe il contesto (background, chiamata, ecc.):
+        // la sorgente muore → la azzero così il prossimo tap ne crea una nuova.
+        if(ctx.state !== 'running') stopSource();
+        paint();
+      };
     }
     return ctx;
   }
-  function load(){
-    if(buffer || loading) return;
+  function load(cb){
+    if(buffer){ if(cb) cb(); return; }
+    if(loading) return;
     loading = true;
     fetch(SRC)
       .then(function(r){ return r.arrayBuffer(); })
       .then(function(ab){ ensureCtx(); return ctx.decodeAudioData(ab); })
-      .then(function(buf){ buffer=buf; loading=false; if(pendingStart) startSource(); })
+      .then(function(buf){ buffer=buf; loading=false; if(cb) cb(); })
       .catch(function(){ loading=false; });
   }
-  function startSource(){
-    if(playing) return;
-    if(!buffer){ pendingStart=true; load(); return; }
+  function stopSource(){
+    if(source){ try{ source.stop(); }catch(_){} try{ source.disconnect(); }catch(_){} source=null; }
+  }
+  function playFromStart(){
     ensureCtx();
+    if(!buffer){ load(playFromStart); return; }   // non pronto: riprova al decode
+    stopSource();                                 // una sorgente parte 1 sola volta → sempre nuova
     source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.loop = true;                 // riproduzione continua
+    source.loop = true;                           // riproduzione continua
     source.connect(gain);
     source.start(0);
-    playing = true; pendingStart = false;
     paint();
   }
 
-  // Sblocco al primo gesto su QUALSIASI punto (fase di cattura → funziona anche
-  // se un handler figlio, es. i tab, intercetta l'evento). iOS richiede che
-  // ctx.resume() avvenga dentro il gesto: da lì in poi la sorgente può partire.
-  function unlock(){
+  // Attivazione DENTRO il gesto: resume del contesto + (ri)crea la sorgente se serve.
+  function activate(){
     ensureCtx();
-    if(ctx.state === 'suspended') ctx.resume();
-    if(wantOn) startSource();
+    if(ctx.state !== 'running' && ctx.resume) ctx.resume();
+    gain.gain.value = wantOn ? VOL : 0;
+    if(wantOn && !source) playFromStart();
     paint();
   }
-  function onFirst(e){
-    if(e && e.target && e.target.closest && e.target.closest('#music-toggle')) return;
-    unlock();
-    if(playing) cleanup();
-  }
-  function cleanup(){
-    document.removeEventListener('touchstart', onFirst, true);
-    document.removeEventListener('touchend',   onFirst, true);
-    document.removeEventListener('click',      onFirst, true);
-  }
-  document.addEventListener('touchstart', onFirst, {capture:true, passive:true});
-  document.addEventListener('touchend',   onFirst, {capture:true, passive:true});
-  document.addEventListener('click',      onFirst, {capture:true});
 
-  // Pulsante altoparlante: prima pressione avvia; poi alterna suono on/off
+  // ── Primo gesto sulla pagina: SOLO tap reali (non scroll) attivano l'audio su iOS ──
+  function onTouchStart(e){
+    if(e.target && e.target.closest && e.target.closest('#music-toggle')) return;
+    var t = e.touches && e.touches[0];
+    tX = t ? t.clientX : 0; tY = t ? t.clientY : 0; moved = false;
+  }
+  function onTouchMove(e){
+    var t = e.touches && e.touches[0];
+    if(t && (Math.abs(t.clientX - tX) > 10 || Math.abs(t.clientY - tY) > 10)) moved = true;
+  }
+  function onTouchEnd(e){
+    if(e.target && e.target.closest && e.target.closest('#music-toggle')) return;
+    if(moved) return;             // era uno scroll → iOS non lo considera attivazione valida
+    if(wantOn) activate();
+  }
+  function onClick(e){
+    if(e.target && e.target.closest && e.target.closest('#music-toggle')) return;
+    if(wantOn) activate();
+  }
+  document.addEventListener('touchstart', onTouchStart, {capture:true, passive:true});
+  document.addEventListener('touchmove',  onTouchMove,  {capture:true, passive:true});
+  document.addEventListener('touchend',   onTouchEnd,   {capture:true, passive:true});
+  document.addEventListener('click',      onClick,      {capture:true});
+
+  // ── Pulsante altoparlante: se non sta suonando → accendi/recupera; se suona → spegni ──
   function onToggle(e){
     e.preventDefault(); e.stopPropagation();
     var now = Date.now();
     if(now - lastTap < 400) return;   // anti doppio evento touch+click (iOS)
     lastTap = now;
-    ensureCtx();
-    if(ctx.state === 'suspended') ctx.resume();
-    if(!playing){                     // prima attivazione → accendi
-      wantOn = true; gain.gain.value = VOL; startSource();
-    } else {                          // già in riproduzione → alterna muto
-      wantOn = !wantOn; gain.gain.value = wantOn ? VOL : 0;
+    if(isPlaying()){                   // spegni (muto)
+      wantOn = false;
+      if(gain) gain.gain.value = 0;
+      paint();
+    } else {                           // accendi o recupera dopo interruzione
+      wantOn = true;
+      activate();
     }
-    paint(); cleanup();
   }
   btn.addEventListener('click', onToggle);
   btn.addEventListener('touchend', onToggle);
 
-  // Pre-scarica e decodifica subito (così al primo tocco è già pronto).
+  // Pre-scarica e decodifica subito (così al primo tap è già pronto).
   load();
   // Tentativo immediato su desktop: se il contesto non nasce sospeso, parte da solo.
-  try{ ensureCtx(); if(ctx.state !== 'suspended') startSource(); }catch(_){}
+  try{ ensureCtx(); if(ctx.state === 'running') activate(); }catch(_){}
   paint();
 })();
 </script>
