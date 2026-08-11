@@ -360,7 +360,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25.1</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25.3</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -1006,107 +1006,96 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
   var SRC = 'theme.mp3';      // file audio (stessa cartella di index.html)
   var VOL = 0.55;             // volume di sottofondo (0.0–1.0)
 
-  var Ctx = window.AudioContext || window.webkitAudioContext;
-  if(!Ctx){ btn.style.display = 'none'; return; }   // browser senza Web Audio
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC){ btn.style.display = 'none'; return; }
 
-  var ctx=null, gain=null, source=null, buffer=null, rawBytes=null;
-  var wantOn=true, lastTap=0, lastDocKick=0, tX=0, tY=0, moved=false;
+  var ctx=null, gain=null, source=null, buffer=null;
+  var wantOn=true, lastEngage=0, lastMute=0, tX=0, tY=0, moved=false;
 
-  // L'icona riflette l'INTENTO una volta avviata la sorgente (immediato, non stato async)
+  // Icona = intento + sorgente presente (immediato, niente stato asincrono)
   function paint(){
     var on = wantOn && !!source;
     btn.innerHTML = on ? ON : OFF;
     btn.classList.toggle('muted', !on);
   }
-
-  // Scarico solo i byte dell'mp3 (NON serve un AudioContext per questo)
-  function fetchBytes(cb){
-    if(rawBytes){ if(cb) cb(); return; }
-    fetch(SRC).then(function(r){ return r.arrayBuffer(); })
-      .then(function(ab){ rawBytes = ab; if(cb) cb(); })
-      .catch(function(){});
-  }
-
-  function makeCtx(){
-    ctx  = new Ctx();
+  function newCtx(){
+    ctx  = new AC();
     gain = ctx.createGain();
-    gain.gain.value = wantOn ? VOL : 0;
+    gain.gain.value = VOL;
     gain.connect(ctx.destination);
     ctx.onstatechange = function(){
-      // iOS interrompe/sospende il contesto (background, chiamata, ecc.):
-      // la sorgente muore → la azzero così il prossimo tap ne crea una nuova.
-      if(ctx && ctx.state !== 'running' && source){
-        try{ source.disconnect(); }catch(_){}
-        source = null;
-      }
+      // iOS interrompe il contesto (background/chiamata): la sorgente muore → azzero
+      if(ctx && ctx.state !== 'running' && source){ try{ source.disconnect(); }catch(_){} source=null; }
       paint();
     };
   }
-  function spawn(){
+  // Pre-decodifica UNA volta (serve un contesto anche solo sospeso). Fatta al load,
+  // così al primo tap lo start è SINCRONO dentro il gesto → requisito iOS.
+  function decodeOnce(){
+    if(buffer) return;
+    if(!ctx) newCtx();
+    fetch(SRC).then(function(r){ return r.arrayBuffer(); })
+      .then(function(ab){ return ctx.decodeAudioData(ab); })
+      .then(function(b){ buffer=b; if(wantOn && ctx && ctx.state==='running') spawn(); paint(); })
+      .catch(function(){});
+  }
+  function spawn(){                       // buffer pronto; idealmente in un gesto
     if(!ctx || !buffer) return;
     if(source){ try{ source.stop(); }catch(_){} try{ source.disconnect(); }catch(_){} source=null; }
     source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.loop = true;                 // riproduzione continua
+    source.loop = true;                   // riproduzione continua
     source.connect(gain);
     gain.gain.value = wantOn ? VOL : 0;
     try{ source.start(0); }catch(_){}
-    if(ctx.resume){ try{ ctx.resume(); }catch(_){} }
     paint();
   }
-
-  // DEVE essere chiamata dentro un gesto utente (tap).
-  function playNow(){
-    if(!wantOn) return;
-    if(source && ctx && ctx.state === 'running'){ gain.gain.value = VOL; paint(); return; } // già in ascolto → smuta
-    if(!rawBytes){ fetchBytes(playNow); return; }
-    // Contesto assente o non recuperabile → lo (ri)creo DENTRO il gesto
-    if(!ctx || ctx.state === 'closed' || ctx.state === 'interrupted' || ctx.state === 'suspended'){
-      if(ctx){ try{ ctx.close(); }catch(_){} }
-      ctx=null; buffer=null; source=null;
-      makeCtx();
+  // DENTRO un gesto: contesto valido (ricreato se rotto) + avvio sincrono
+  function engage(){
+    var now = Date.now();
+    if(now - lastEngage < 400) return;    // dedup touchend+click / tap rapidi
+    lastEngage = now;
+    if(!ctx) newCtx();
+    if(ctx.state === 'closed' || ctx.state === 'interrupted'){   // contesto morto → ricrea nel gesto
+      try{ ctx.close(); }catch(_){}
+      source = null; newCtx();
     }
     if(ctx.resume){ try{ ctx.resume(); }catch(_){} }
-    if(!buffer){
-      // decodifico con QUESTO contesto (slice: non consumo rawBytes, utile per ri-decodifiche)
-      ctx.decodeAudioData(rawBytes.slice(0)).then(function(b){ buffer=b; spawn(); }).catch(function(){});
-    } else {
-      spawn();
-    }
+    if(!wantOn) return;
+    if(source){ gain.gain.value = VOL; paint(); return; }        // già presente → smuta
+    if(buffer){ spawn(); }                                       // sincrono nel gesto
+    else { decodeOnce(); }                                       // non pronto: parte al decode
   }
 
-  // ── Primo gesto sulla pagina: SOLO tap reali (non scroll) avviano l'audio ──
+  // ── Primo tap reale (no scroll) su QUALSIASI punto avvia la musica ──
   function inBtn(e){ return e.target && e.target.closest && e.target.closest('#music-toggle'); }
-  function docKick(){ var now=Date.now(); if(now-lastDocKick<450) return; lastDocKick=now; if(wantOn) playNow(); }
-  function onTouchStart(e){ if(inBtn(e))return; var t=e.touches&&e.touches[0]; tX=t?t.clientX:0; tY=t?t.clientY:0; moved=false; }
-  function onTouchMove(e){ var t=e.touches&&e.touches[0]; if(t&&(Math.abs(t.clientX-tX)>10||Math.abs(t.clientY-tY)>10)) moved=true; }
-  function onTouchEnd(e){ if(inBtn(e))return; if(moved)return; docKick(); }   // scroll → nessuna attivazione
-  function onClick(e){ if(inBtn(e))return; docKick(); }
-  document.addEventListener('touchstart', onTouchStart, {capture:true, passive:true});
-  document.addEventListener('touchmove',  onTouchMove,  {capture:true, passive:true});
-  document.addEventListener('touchend',   onTouchEnd,   {capture:true, passive:true});
-  document.addEventListener('click',      onClick,      {capture:true});
+  function onTS(e){ if(inBtn(e))return; var t=e.touches&&e.touches[0]; tX=t?t.clientX:0; tY=t?t.clientY:0; moved=false; }
+  function onTM(e){ var t=e.touches&&e.touches[0]; if(t&&(Math.abs(t.clientX-tX)>24||Math.abs(t.clientY-tY)>24)) moved=true; }
+  function onTE(e){ if(inBtn(e))return; if(moved)return; if(wantOn) engage(); }
+  function onCL(e){ if(inBtn(e))return; if(wantOn) engage(); }
+  document.addEventListener('touchstart', onTS, {capture:true, passive:true});
+  document.addEventListener('touchmove',  onTM, {capture:true, passive:true});
+  document.addEventListener('touchend',   onTE, {capture:true, passive:true});
+  document.addEventListener('click',      onCL, {capture:true});
 
   // ── Pulsante altoparlante ──
   function onToggle(e){
     e.preventDefault(); e.stopPropagation();
-    var now = Date.now();
-    if(now - lastTap < 350) return;   // anti doppio evento touch+click (iOS)
-    lastTap = now;
-    if(wantOn && source && ctx && ctx.state === 'running'){   // sta suonando → spegni
+    if(wantOn && source){                 // sta suonando → spegni (muto)
+      var now = Date.now(); if(now - lastMute < 350) return; lastMute = now;
       wantOn = false;
       if(gain) gain.gain.value = 0;
       paint();
-    } else {                                                  // accendi / recupera
+    } else {                              // accendi / recupera
       wantOn = true;
-      playNow();
+      engage();
     }
   }
   btn.addEventListener('click', onToggle);
   btn.addEventListener('touchend', onToggle);
 
-  // Al load scarico solo i byte (nessun AudioContext prima del gesto).
-  fetchBytes();
+  // Al load: crea il contesto (sospeso su mobile) e pre-decodifica il brano.
+  decodeOnce();
   paint();
 })();
 </script>
