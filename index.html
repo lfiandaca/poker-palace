@@ -360,7 +360,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25.3</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25.4</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -1009,7 +1009,7 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
   var AC = window.AudioContext || window.webkitAudioContext;
   if(!AC){ btn.style.display = 'none'; return; }
 
-  var ctx=null, gain=null, source=null, buffer=null;
+  var ctx=null, gain=null, source=null, buffer=null, decoding=false;
   var wantOn=true, lastEngage=0, lastMute=0, tX=0, tY=0, moved=false;
 
   // Icona = intento + sorgente presente (immediato, niente stato asincrono)
@@ -1018,6 +1018,8 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
     btn.innerHTML = on ? ON : OFF;
     btn.classList.toggle('muted', !on);
   }
+  // Contesto di RIPRODUZIONE: va creato DENTRO un gesto, altrimenti su iOS
+  // standalone resta muto anche se "running".
   function newCtx(){
     ctx  = new AC();
     gain = ctx.createGain();
@@ -1029,17 +1031,24 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
       paint();
     };
   }
-  // Pre-decodifica UNA volta (serve un contesto anche solo sospeso). Fatta al load,
-  // così al primo tap lo start è SINCRONO dentro il gesto → requisito iOS.
+  // Pre-decodifica UNA volta usando un contesto TEMPORANEO (solo decodifica, nessun
+  // output): così al primo tap il buffer è pronto e lo start è sincrono nel gesto.
+  // Il buffer decodificato è riutilizzabile dal contesto di riproduzione.
   function decodeOnce(){
-    if(buffer) return;
-    if(!ctx) newCtx();
+    if(buffer || decoding) return;
+    decoding = true;
+    var dctx;
+    try{ dctx = new AC(); }catch(_){ decoding=false; return; }
     fetch(SRC).then(function(r){ return r.arrayBuffer(); })
-      .then(function(ab){ return ctx.decodeAudioData(ab); })
-      .then(function(b){ buffer=b; if(wantOn && ctx && ctx.state==='running') spawn(); paint(); })
-      .catch(function(){});
+      .then(function(ab){ return dctx.decodeAudioData(ab); })
+      .then(function(b){
+        buffer = b; decoding = false; try{ dctx.close(); }catch(_){}
+        if(wantOn && ctx && ctx.state === 'running') spawn();
+        paint();
+      })
+      .catch(function(){ decoding=false; try{ dctx.close(); }catch(_){} });
   }
-  function spawn(){                       // buffer pronto; idealmente in un gesto
+  function spawn(){                       // buffer pronto; dentro un gesto
     if(!ctx || !buffer) return;
     if(source){ try{ source.stop(); }catch(_){} try{ source.disconnect(); }catch(_){} source=null; }
     source = ctx.createBufferSource();
@@ -1050,21 +1059,21 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
     try{ source.start(0); }catch(_){}
     paint();
   }
-  // DENTRO un gesto: contesto valido (ricreato se rotto) + avvio sincrono
+  // DENTRO un gesto: crea/ripristina il contesto di riproduzione + avvia sincrono
   function engage(){
     var now = Date.now();
     if(now - lastEngage < 400) return;    // dedup touchend+click / tap rapidi
     lastEngage = now;
-    if(!ctx) newCtx();
-    if(ctx.state === 'closed' || ctx.state === 'interrupted'){   // contesto morto → ricrea nel gesto
+    if(!ctx){ newCtx(); }                                          // ← creato NEL gesto (iOS)
+    else if(ctx.state === 'closed' || ctx.state === 'interrupted'){ // contesto morto → ricrea nel gesto
       try{ ctx.close(); }catch(_){}
       source = null; newCtx();
     }
     if(ctx.resume){ try{ ctx.resume(); }catch(_){} }
     if(!wantOn) return;
-    if(source){ gain.gain.value = VOL; paint(); return; }        // già presente → smuta
-    if(buffer){ spawn(); }                                       // sincrono nel gesto
-    else { decodeOnce(); }                                       // non pronto: parte al decode
+    if(source){ gain.gain.value = VOL; paint(); return; }          // già presente → smuta
+    if(buffer){ spawn(); }                                         // sincrono nel gesto
+    else { decodeOnce(); }                                         // non pronto: parte al decode
   }
 
   // ── Primo tap reale (no scroll) su QUALSIASI punto avvia la musica ──
