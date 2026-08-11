@@ -265,7 +265,6 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 </style>
 </head>
 <body>
-<audio id="bg-music" src="theme.mp3" loop preload="auto"></audio>
 <button id="music-toggle" type="button" aria-label="Attiva o silenzia la musica">&#128266;</button>
 <div class="wrap">
   <header>
@@ -998,60 +997,102 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
   }
 })();
 
-/* ═══════ MUSICA DI SOTTOFONDO ═══════ */
+/* ═══════ MUSICA DI SOTTOFONDO (Web Audio API — affidabile su iOS standalone) ═══════ */
 (function(){
-  var audio = document.getElementById('bg-music');
-  var btn   = document.getElementById('music-toggle');
-  if(!audio || !btn) return;
+  var btn = document.getElementById('music-toggle');
+  if(!btn) return;
   var ON  = '\uD83D\uDD0A';   // 🔊
   var OFF = '\uD83D\uDD07';   // 🔇
-  var started = false, lastTap = 0;
+  var SRC = 'theme.mp3';      // file audio (stessa cartella di index.html)
+  var VOL = 0.55;             // volume di sottofondo (0.0–1.0)
 
-  audio.volume = 0.55;        // volume di sottofondo (0.0–1.0)
+  var Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx){ btn.style.display = 'none'; return; }   // browser senza Web Audio
+
+  var ctx=null, gain=null, source=null, buffer=null;
+  var wantOn=true, playing=false, loading=false, pendingStart=false, lastTap=0;
 
   function paint(){
-    var silent = audio.muted || audio.paused;
+    var silent = !playing || !wantOn;
     btn.innerHTML = silent ? OFF : ON;
     btn.classList.toggle('muted', silent);
   }
-  function cleanup(){
-    document.removeEventListener('touchend', onFirst, true);
-    document.removeEventListener('click',    onFirst, true);
+  function ensureCtx(){
+    if(!ctx){
+      ctx  = new Ctx();
+      gain = ctx.createGain();
+      gain.gain.value = wantOn ? VOL : 0;
+      gain.connect(ctx.destination);
+    }
+    return ctx;
   }
-  function start(){
-    if(started) return;
-    audio.muted = false;
-    var p = audio.play();
-    if(p && p.then){
-      p.then(function(){ started = true; paint(); cleanup(); })
-       .catch(function(){ /* autoplay bloccato dal browser: si attende un gesto utente */ });
-    } else { started = true; paint(); cleanup(); }
+  function load(){
+    if(buffer || loading) return;
+    loading = true;
+    fetch(SRC)
+      .then(function(r){ return r.arrayBuffer(); })
+      .then(function(ab){ ensureCtx(); return ctx.decodeAudioData(ab); })
+      .then(function(buf){ buffer=buf; loading=false; if(pendingStart) startSource(); })
+      .catch(function(){ loading=false; });
+  }
+  function startSource(){
+    if(playing) return;
+    if(!buffer){ pendingStart=true; load(); return; }
+    ensureCtx();
+    source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;                 // riproduzione continua
+    source.connect(gain);
+    source.start(0);
+    playing = true; pendingStart = false;
+    paint();
   }
 
-  // Il primo tocco/click su QUALSIASI punto della pagina avvia la musica.
-  // Fase di cattura → parte anche se un handler figlio (es. i tab) intercetta l'evento.
+  // Sblocco al primo gesto su QUALSIASI punto (fase di cattura → funziona anche
+  // se un handler figlio, es. i tab, intercetta l'evento). iOS richiede che
+  // ctx.resume() avvenga dentro il gesto: da lì in poi la sorgente può partire.
+  function unlock(){
+    ensureCtx();
+    if(ctx.state === 'suspended') ctx.resume();
+    if(wantOn) startSource();
+    paint();
+  }
   function onFirst(e){
-    if(e && e.target && e.target.closest && e.target.closest('#music-toggle')) return; // il pulsante ha la sua logica
-    start();
+    if(e && e.target && e.target.closest && e.target.closest('#music-toggle')) return;
+    unlock();
+    if(playing) cleanup();
   }
-  document.addEventListener('touchend', onFirst, {capture:true, passive:true});
-  document.addEventListener('click',    onFirst, {capture:true});
+  function cleanup(){
+    document.removeEventListener('touchstart', onFirst, true);
+    document.removeEventListener('touchend',   onFirst, true);
+    document.removeEventListener('click',      onFirst, true);
+  }
+  document.addEventListener('touchstart', onFirst, {capture:true, passive:true});
+  document.addEventListener('touchend',   onFirst, {capture:true, passive:true});
+  document.addEventListener('click',      onFirst, {capture:true});
 
-  // Pulsante altoparlante: avvia / silenzia / riattiva
+  // Pulsante altoparlante: prima pressione avvia; poi alterna suono on/off
   function onToggle(e){
     e.preventDefault(); e.stopPropagation();
     var now = Date.now();
     if(now - lastTap < 400) return;   // anti doppio evento touch+click (iOS)
     lastTap = now;
-    if(audio.paused){ audio.muted = false; audio.play(); started = true; cleanup(); }
-    else { audio.muted = !audio.muted; }
-    paint();
+    ensureCtx();
+    if(ctx.state === 'suspended') ctx.resume();
+    if(!playing){                     // prima attivazione → accendi
+      wantOn = true; gain.gain.value = VOL; startSource();
+    } else {                          // già in riproduzione → alterna muto
+      wantOn = !wantOn; gain.gain.value = wantOn ? VOL : 0;
+    }
+    paint(); cleanup();
   }
   btn.addEventListener('click', onToggle);
   btn.addEventListener('touchend', onToggle);
 
-  // Tentativo di autoplay all'avvio (di norma bloccato su mobile: parte al 1° gesto)
-  start();
+  // Pre-scarica e decodifica subito (così al primo tocco è già pronto).
+  load();
+  // Tentativo immediato su desktop: se il contesto non nasce sospeso, parte da solo.
+  try{ ensureCtx(); if(ctx.state !== 'suspended') startSource(); }catch(_){}
   paint();
 })();
 </script>
