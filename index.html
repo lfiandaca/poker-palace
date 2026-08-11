@@ -73,20 +73,6 @@ h1{
 .home-btn.visible{display:inline-block}
 .home-btn:active{background:rgba(212,175,55,.12)}
 
-/* ── Toggle musica (angolo alto-sinistra) ── */
-#music-toggle{
-  position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:10px;z-index:60;
-  width:40px;height:40px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.4);border:1px solid rgba(212,175,55,.4);
-  color:var(--gold-bright);font-size:19px;line-height:1;cursor:pointer;
-  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-  transition:transform .15s ease,opacity .2s ease;
-  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-}
-#music-toggle:active{transform:scale(.88)}
-#music-toggle.muted{opacity:.5}
-
 /* ── Top-level page views ── */
 .page{display:none}
 .page.active{display:block;animation:fade .35s ease}
@@ -265,8 +251,6 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 </style>
 </head>
 <body>
-<audio id="bg-music" src="theme.mp3" loop preload="auto" playsinline></audio>
-<button id="music-toggle" type="button" aria-label="Attiva o silenzia la musica">&#128266;</button>
 <div class="wrap">
   <header>
     <div class="crest" id="crest-tap"><span class="s-black">&#9824;</span> <span class="s-red">&#9829;</span> <span class="s-red">&#9830;</span> <span class="s-black">&#9827;</span></div>
@@ -361,7 +345,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v25.6</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -996,77 +980,6 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
   } else {
     startCountdown();
   }
-})();
-
-/* ═══════ MUSICA DI SOTTOFONDO (elemento <audio> — standard, ok iOS standalone) ═══════ */
-(function(){
-  var audio = document.getElementById('bg-music');
-  var btn   = document.getElementById('music-toggle');
-  if(!audio || !btn) return;
-  var ON  = '\uD83D\uDD0A';   // 🔊
-  var OFF = '\uD83D\uDD07';   // 🔇
-  var VOL = 0.55;             // volume di sottofondo (0.0–1.0)
-  var wantOn = true, lastTap = 0, tX=0, tY=0, moved=false;
-
-  audio.volume = VOL;
-
-  function paint(){
-    var on = wantOn && !audio.paused && !audio.muted;
-    btn.innerHTML = on ? ON : OFF;
-    btn.classList.toggle('muted', !on);
-  }
-  function play(){
-    audio.muted = false;
-    var p = audio.play();
-    if(p && p.then){ p.then(paint).catch(function(){ paint(); }); }
-    else { paint(); }
-  }
-  // Aggiorno l'icona sugli eventi reali dell'elemento
-  audio.addEventListener('play',    paint);
-  audio.addEventListener('playing', paint);
-  audio.addEventListener('pause',   paint);
-  // Loop di sicurezza (su iOS l'attributo loop a volte non basta)
-  audio.addEventListener('ended', function(){ if(wantOn){ try{ audio.currentTime=0; }catch(_){} play(); } });
-
-  // Ripresa quando si torna sull'app (riapertura PWA / cambio scheda / focus):
-  // su iOS standalone la pagina viene "scongelata" e l'audio resta in pausa.
-  function resume(){ if(wantOn){ audio.muted=false; var p=audio.play(); if(p&&p.catch) p.catch(function(){}); } }
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) resume(); });
-  window.addEventListener('pageshow', resume);
-  window.addEventListener('focus',   resume);
-
-  // Tentativo di avvio all'apertura: su Android (PWA installata) di solito parte;
-  // su iOS viene bloccato e riparte al primo tap qui sotto.
-  play();
-
-  // ── Primo tap reale (no scroll) su QUALSIASI punto avvia/rilancia la musica ──
-  function inBtn(e){ return e.target && e.target.closest && e.target.closest('#music-toggle'); }
-  function onTS(e){ if(inBtn(e))return; var t=e.touches&&e.touches[0]; tX=t?t.clientX:0; tY=t?t.clientY:0; moved=false; }
-  function onTM(e){ var t=e.touches&&e.touches[0]; if(t&&(Math.abs(t.clientX-tX)>24||Math.abs(t.clientY-tY)>24)) moved=true; }
-  function onTE(e){ if(inBtn(e))return; if(moved)return; if(wantOn) play(); }   // play() ripetuto è innocuo
-  function onCL(e){ if(inBtn(e))return; if(wantOn) play(); }
-  document.addEventListener('touchstart', onTS, {capture:true, passive:true});
-  document.addEventListener('touchmove',  onTM, {capture:true, passive:true});
-  document.addEventListener('touchend',   onTE, {capture:true, passive:true});
-  document.addEventListener('click',      onCL, {capture:true});
-
-  // ── Pulsante altoparlante: spegni / accendi ──
-  function onToggle(e){
-    e.preventDefault(); e.stopPropagation();
-    var now = Date.now();
-    if(now - lastTap < 300) return;   // anti doppio evento touch+click (iOS)
-    lastTap = now;
-    if(wantOn && !audio.paused && !audio.muted){   // sta suonando → spegni
-      wantOn = false; audio.muted = true; paint();
-    } else {                                       // accendi
-      wantOn = true; audio.muted = false;
-      if(audio.paused) play(); else paint();
-    }
-  }
-  btn.addEventListener('click', onToggle);
-  btn.addEventListener('touchend', onToggle);
-
-  paint();
 })();
 </script>
 </body>
