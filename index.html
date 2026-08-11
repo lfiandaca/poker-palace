@@ -73,6 +73,20 @@ h1{
 .home-btn.visible{display:inline-block}
 .home-btn:active{background:rgba(212,175,55,.12)}
 
+/* ── Toggle musica (angolo alto-sinistra) ── */
+#music-toggle{
+  position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:10px;z-index:60;
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.4);border:1px solid rgba(212,175,55,.4);
+  color:var(--gold-bright);font-size:19px;line-height:1;cursor:pointer;
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  transition:transform .15s ease,opacity .2s ease;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+#music-toggle:active{transform:scale(.88)}
+#music-toggle.muted{opacity:.5}
+
 /* ── Top-level page views ── */
 .page{display:none}
 .page.active{display:block;animation:fade .35s ease}
@@ -251,6 +265,8 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 </style>
 </head>
 <body>
+<audio id="bg-music" src="theme.mp3" loop preload="auto"></audio>
+<button id="music-toggle" type="button" aria-label="Attiva o silenzia la musica">&#128266;</button>
 <div class="wrap">
   <header>
     <div class="crest" id="crest-tap"><span class="s-black">&#9824;</span> <span class="s-red">&#9829;</span> <span class="s-red">&#9830;</span> <span class="s-black">&#9827;</span></div>
@@ -345,7 +361,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23</footer>
+<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v24</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -980,6 +996,63 @@ seedIfEmpty().then(()=>startListeners()).catch(err=>{
   } else {
     startCountdown();
   }
+})();
+
+/* ═══════ MUSICA DI SOTTOFONDO ═══════ */
+(function(){
+  var audio = document.getElementById('bg-music');
+  var btn   = document.getElementById('music-toggle');
+  if(!audio || !btn) return;
+  var ON  = '\uD83D\uDD0A';   // 🔊
+  var OFF = '\uD83D\uDD07';   // 🔇
+  var started = false, lastTap = 0;
+
+  audio.volume = 0.55;        // volume di sottofondo (0.0–1.0)
+
+  function paint(){
+    var silent = audio.muted || audio.paused;
+    btn.innerHTML = silent ? OFF : ON;
+    btn.classList.toggle('muted', silent);
+  }
+  function cleanup(){
+    document.removeEventListener('touchend', onFirst, true);
+    document.removeEventListener('click',    onFirst, true);
+  }
+  function start(){
+    if(started) return;
+    audio.muted = false;
+    var p = audio.play();
+    if(p && p.then){
+      p.then(function(){ started = true; paint(); cleanup(); })
+       .catch(function(){ /* autoplay bloccato dal browser: si attende un gesto utente */ });
+    } else { started = true; paint(); cleanup(); }
+  }
+
+  // Il primo tocco/click su QUALSIASI punto della pagina avvia la musica.
+  // Fase di cattura → parte anche se un handler figlio (es. i tab) intercetta l'evento.
+  function onFirst(e){
+    if(e && e.target && e.target.closest && e.target.closest('#music-toggle')) return; // il pulsante ha la sua logica
+    start();
+  }
+  document.addEventListener('touchend', onFirst, {capture:true, passive:true});
+  document.addEventListener('click',    onFirst, {capture:true});
+
+  // Pulsante altoparlante: avvia / silenzia / riattiva
+  function onToggle(e){
+    e.preventDefault(); e.stopPropagation();
+    var now = Date.now();
+    if(now - lastTap < 400) return;   // anti doppio evento touch+click (iOS)
+    lastTap = now;
+    if(audio.paused){ audio.muted = false; audio.play(); started = true; cleanup(); }
+    else { audio.muted = !audio.muted; }
+    paint();
+  }
+  btn.addEventListener('click', onToggle);
+  btn.addEventListener('touchend', onToggle);
+
+  // Tentativo di autoplay all'avvio (di norma bloccato su mobile: parte al 1° gesto)
+  start();
+  paint();
 })();
 </script>
 </body>
