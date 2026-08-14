@@ -345,7 +345,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.1</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -370,6 +370,12 @@ const db  = getFirestore(app);
 const winsCol   = collection(db,'wins_2627');
 const finalsCol = collection(db,'finals_2627');
 const calDoc    = doc(db,'meta','calendario_2627');
+const versionDoc= doc(db,'meta','version');
+
+// Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
+// su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
+// poi aggiorna meta/version.v su Firestore con lo stesso numero.
+const APP_VERSION = "23.1";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
@@ -905,9 +911,28 @@ function initSelects(){
 initSelects();
 renderPalmares();
 renderAll();                       // render immediato dai dati locali (calendario da CAL_NEXT)
-seedIfEmpty().then(()=>startListeners()).catch(err=>{
+
+/* ── Auto-update trasparente ──
+   Confronta APP_VERSION con meta/version.v su Firestore. Se differiscono, l'app è
+   vecchia (cache) → ricarica forzando il download del file nuovo (?v=…), con
+   protezione anti-loop se la cache resta cocciuta. */
+function watchVersion(){
+  const already = new URLSearchParams(location.search).get('v');
+  onSnapshot(versionDoc, snap=>{
+    if(!snap.exists()) return;
+    const remote = String((snap.data()||{}).v || '');
+    if(!remote || remote === APP_VERSION) return;   // già all'ultima versione
+    if(already === remote) return;                  // già tentato per questa versione → niente loop
+    location.replace(location.pathname + '?v=' + encodeURIComponent(remote));
+  });
+}
+// Footer = versione locale (unica fonte: APP_VERSION)
+const _f = document.getElementById('app-footer'); if(_f) _f.textContent = 'v' + APP_VERSION;
+
+seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
   console.warn('Firebase error:', err);
   renderAll();
+  watchVersion();
 });
 </script>
 
