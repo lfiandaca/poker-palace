@@ -361,7 +361,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.3</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.4</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -391,7 +391,7 @@ const versionDoc= doc(db,'meta','version');
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.3";
+const APP_VERSION = "23.4";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
@@ -1024,25 +1024,23 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
 })();
 
 /* ═══════ MUSICA DI SOTTOFONDO (muted-autoplay + unmute) ═══════
-   L'elemento <audio> resta SEMPRE vivo grazie all'autoplay muto (permesso ovunque).
-   Non usiamo mai pause dai controlli → niente stato "in play ma muto".
-   · Android/desktop: tolgo il muto subito → suono all'apertura.
-   · iOS: resta muto finché non tocchi. Alla RIAPERTURA iOS lascia l'audio
-     "vivo ma muto": rimetto muto (icona onesta) e il primo tocco fa un
-     RIAVVIO PULITO (pause->currentTime=0->play nel gesto) che sblocca il suono. */
+   L'elemento <audio> parte con autoplay MUTO (permesso ovunque) e resta vivo.
+   Il tocco fa solo unmute + play NEL GESTO (unico metodo affidabile su iOS).
+   · Android/desktop: tolgo il muto subito -> suono all'apertura.
+   · iOS: muto finche' non tocchi. Alla RIAPERTURA metto in pausa lo "zombie"
+     cosi' il tocco fa un play() pulito dentro il gesto. */
 (function(){
   var audio = document.getElementById('bg-music');
   var btn   = document.getElementById('music-toggle');
   if(!audio || !btn) return;
-  var ON  = '🔊';   // speaker on
-  var OFF = '🔇';   // speaker off
+  var ON  = "🔊";
+  var OFF = "🔇";
   var VOL = 0.55;
 
   var isIOS = /iP(hone|ad|od)/i.test(navigator.userAgent || '') ||
               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
               navigator.standalone === true;
-  var wantOn=true, lastTap=0, tX=0, tY=0, moved=false;
-  var needsKick = isIOS;   // su iOS il 1º tocco dopo ogni apertura/ritorno fa un riavvio pulito
+  var wantOn=true, lastTap=0, lastAlive=0, tX=0, tY=0, moved=false;
 
   audio.volume = VOL;
 
@@ -1051,9 +1049,10 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
     btn.innerHTML = on ? ON : OFF;
     btn.classList.toggle('muted', !on);
   }
-  function keepAlive(){       // tiene l'elemento in play (muto); su non-iOS toglie il muto
+  function keepAlive(){
+    var now = Date.now(); if(now - lastAlive < 600) return; lastAlive = now;  // evita doppi avvii
     if(audio.paused){
-      audio.muted = true;
+      audio.muted = true;                        // autoplay muto: sempre consentito
       var p = audio.play();
       if(p && p.then){ p.then(function(){ if(wantOn && !isIOS) audio.muted=false; paint(); }).catch(function(){ paint(); }); }
       else { if(wantOn && !isIOS) audio.muted=false; paint(); }
@@ -1062,17 +1061,8 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
       paint();
     }
   }
-  function hardKick(){        // riavvio pulito nel gesto: rompe lo stato "vivo ma muto" di iOS
-    try{ audio.pause(); }catch(_){}
-    try{ audio.currentTime = 0; }catch(_){}
-    audio.muted = false;
-    var p = audio.play(); if(p && p.catch) p.catch(function(){});
-    needsKick = false;
-    paint();
-  }
-  function activateInGesture(){
+  function activateInGesture(){                  // nel gesto: unmute + play (affidabile su iOS)
     if(!wantOn) return;
-    if(needsKick){ hardKick(); return; }
     audio.muted = false;
     if(audio.paused){ var p=audio.play(); if(p&&p.catch) p.catch(function(){}); }
     paint();
@@ -1082,23 +1072,17 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
   audio.addEventListener('pause',   paint);
   audio.addEventListener('ended', function(){ try{ audio.currentTime=0; }catch(_){} keepAlive(); }); // loop di sicurezza
 
-  keepAlive();
+  keepAlive();   // avvio (muted autoplay; su Android togliamo il muto)
 
-  // Ritorno sull'app (riapertura PWA / cambio scheda)
+  // Ritorno sull'app: su iOS metto in pausa lo "zombie" -> il tocco fara' play() nel gesto
   function onReturn(){
-    if(isIOS){
-      needsKick = true;
-      audio.muted = true;                         // icona OFF finché non tocchi
-      if(audio.paused){ var p=audio.play(); if(p&&p.catch) p.catch(function(){}); }
-      paint();
-    } else {
-      keepAlive();
-    }
+    if(isIOS){ try{ audio.pause(); }catch(_){} paint(); }
+    else { keepAlive(); }
   }
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) onReturn(); });
-  window.addEventListener('pageshow', onReturn);
+  window.addEventListener('pageshow', function(e){ if(e && e.persisted) onReturn(); }); // solo ripristini reali
 
-  // ── Primo tocco reale (no scroll): sblocca/riavvia il suono nel gesto ──
+  // ── Primo tocco reale (no scroll): sblocca il suono nel gesto ──
   function inBtn(e){ return e.target && e.target.closest && e.target.closest('#music-toggle'); }
   function onTS(e){ if(inBtn(e))return; var t=e.touches&&e.touches[0]; tX=t?t.clientX:0; tY=t?t.clientY:0; moved=false; }
   function onTM(e){ var t=e.touches&&e.touches[0]; if(t&&(Math.abs(t.clientX-tX)>24||Math.abs(t.clientY-tY)>24)) moved=true; }
@@ -1109,17 +1093,12 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
   document.addEventListener('touchend',   onTE, {capture:true, passive:true});
   document.addEventListener('click',      onCL, {capture:true});
 
-  // ── Pulsante altoparlante: mute / unmute (mai pause) ──
+  // ── Pulsante altoparlante: mute / unmute (mai pause dai controlli) ──
   function onToggle(e){
     e.preventDefault(); e.stopPropagation();
-    var now = Date.now();
-    if(now - lastTap < 300) return;
-    lastTap = now;
-    if(wantOn && !audio.muted && !audio.paused){   // sta suonando → muta
-      wantOn = false; audio.muted = true; paint();
-    } else {                                       // attiva / sblocca
-      wantOn = true; activateInGesture();
-    }
+    var now = Date.now(); if(now - lastTap < 300) return; lastTap = now;
+    if(wantOn && !audio.muted && !audio.paused){ wantOn=false; audio.muted=true; paint(); }
+    else { wantOn=true; activateInGesture(); }
   }
   btn.addEventListener('click', onToggle);
   btn.addEventListener('touchend', onToggle);
