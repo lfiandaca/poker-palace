@@ -73,20 +73,6 @@ h1{
 .home-btn.visible{display:inline-block}
 .home-btn:active{background:rgba(212,175,55,.12)}
 
-/* ── Toggle musica (angolo alto-sinistra) ── */
-#music-toggle{
-  position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:10px;z-index:60;
-  width:40px;height:40px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.4);border:1px solid rgba(212,175,55,.4);
-  color:var(--gold-bright);font-size:19px;line-height:1;cursor:pointer;
-  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-  transition:transform .15s ease,opacity .2s ease;
-  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-}
-#music-toggle:active{transform:scale(.88)}
-#music-toggle.muted{opacity:.5}
-
 /* ── Top-level page views ── */
 .page{display:none}
 .page.active{display:block;animation:fade .35s ease}
@@ -265,8 +251,6 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 </style>
 </head>
 <body>
-<audio id="bg-music" src="theme.mp3" loop preload="auto" playsinline></audio>
-<button id="music-toggle" type="button" aria-label="Attiva o silenzia la musica">&#128266;</button>
 <div class="wrap">
   <header>
     <div class="crest" id="crest-tap"><span class="s-black">&#9824;</span> <span class="s-red">&#9829;</span> <span class="s-red">&#9830;</span> <span class="s-black">&#9827;</span></div>
@@ -361,7 +345,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.5</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.1</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -391,7 +375,7 @@ const versionDoc= doc(db,'meta','version');
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.5";
+const APP_VERSION = "23.1";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
@@ -1021,96 +1005,6 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
   } else {
     startCountdown();
   }
-})();
-
-/* ═══════ MUSICA DI SOTTOFONDO (muted-autoplay + unmute) ═══════
-   Avvio unico all'init (muted autoplay). Ripresa solo su visibilitychange (NON su
-   pageshow: al cold-launch causava un doppio avvio). Guard "pending" contro play()
-   sovrapposti. Su iOS, dopo un ritorno in foreground l'elemento e' corrotto:
-   al tocco faccio audio.load() + play() NEL GESTO (unico reset affidabile). */
-(function(){
-  var audio = document.getElementById('bg-music');
-  var btn   = document.getElementById('music-toggle');
-  if(!audio || !btn) return;
-  var ON  = "🔊";
-  var OFF = "🔇";
-  var VOL = 0.55;
-
-  var isIOS = /iP(hone|ad|od)/i.test(navigator.userAgent || '') ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-              navigator.standalone === true;
-  var wantOn=true, lastTap=0, tX=0, tY=0, moved=false;
-  var pending=false;      // play() in corso (evita doppi avvii)
-  var needReset=false;    // iOS: serve audio.load() al prossimo tocco dopo un ritorno
-
-  audio.volume = VOL;
-
-  function paint(){
-    var on = wantOn && !audio.muted && !audio.paused;
-    btn.innerHTML = on ? ON : OFF;
-    btn.classList.toggle('muted', !on);
-  }
-  // Avvia in muted autoplay (una sola volta grazie a pending); su non-iOS toglie il muto
-  function startMuted(unmute){
-    if(!audio.paused){ if(unmute && wantOn && !isIOS) audio.muted=false; paint(); return; }
-    if(pending) return;
-    pending = true;
-    audio.muted = true;
-    var p = audio.play();
-    var done = function(){ pending=false; if(unmute && wantOn && !isIOS) audio.muted=false; paint(); };
-    if(p && p.then){ p.then(done).catch(function(){ pending=false; paint(); }); }
-    else { done(); }
-  }
-  // Nel gesto: sblocca il suono. Dopo un ritorno iOS, reset completo (load) + play.
-  function activateInGesture(){
-    if(!wantOn) return;
-    if(needReset){
-      needReset = false;
-      try{ audio.load(); }catch(_){}      // reset dell'elemento corrotto dal background
-      audio.muted = false;
-      var p1 = audio.play(); if(p1 && p1.catch) p1.catch(function(){});
-      paint(); return;
-    }
-    audio.muted = false;
-    if(audio.paused){ var p2 = audio.play(); if(p2 && p2.catch) p2.catch(function(){}); }
-    paint();
-  }
-  audio.addEventListener('play',    paint);
-  audio.addEventListener('playing', paint);
-  audio.addEventListener('pause',   paint);
-  audio.addEventListener('ended', function(){ try{ audio.currentTime=0; }catch(_){} startMuted(true); }); // loop di sicurezza
-
-  startMuted(true);   // AVVIO (unico)
-
-  // Ripresa al ritorno in foreground (visibilitychange NON scatta al cold-launch)
-  document.addEventListener('visibilitychange', function(){
-    if(document.hidden) return;
-    if(isIOS){ needReset = true; try{ audio.pause(); }catch(_){} paint(); }  // icona OFF; il tocco fara' load+play
-    else { startMuted(true); }
-  });
-
-  // ── Primo tocco reale (no scroll): sblocca il suono nel gesto ──
-  function inBtn(e){ return e.target && e.target.closest && e.target.closest('#music-toggle'); }
-  function onTS(e){ if(inBtn(e))return; var t=e.touches&&e.touches[0]; tX=t?t.clientX:0; tY=t?t.clientY:0; moved=false; }
-  function onTM(e){ var t=e.touches&&e.touches[0]; if(t&&(Math.abs(t.clientX-tX)>24||Math.abs(t.clientY-tY)>24)) moved=true; }
-  function onTE(e){ if(inBtn(e))return; if(moved)return; activateInGesture(); }
-  function onCL(e){ if(inBtn(e))return; activateInGesture(); }
-  document.addEventListener('touchstart', onTS, {capture:true, passive:true});
-  document.addEventListener('touchmove',  onTM, {capture:true, passive:true});
-  document.addEventListener('touchend',   onTE, {capture:true, passive:true});
-  document.addEventListener('click',      onCL, {capture:true});
-
-  // ── Pulsante altoparlante: mute / unmute (mai pause dai controlli) ──
-  function onToggle(e){
-    e.preventDefault(); e.stopPropagation();
-    var now = Date.now(); if(now - lastTap < 300) return; lastTap = now;
-    if(wantOn && !audio.muted && !audio.paused){ wantOn=false; audio.muted=true; paint(); }
-    else { wantOn=true; activateInGesture(); }
-  }
-  btn.addEventListener('click', onToggle);
-  btn.addEventListener('touchend', onToggle);
-
-  paint();
 })();
 </script>
 </body>
