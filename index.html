@@ -345,7 +345,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.1</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.3</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -375,7 +375,7 @@ const versionDoc= doc(db,'meta','version');
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.1";
+const APP_VERSION = "23.3";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
@@ -963,9 +963,24 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
 
 /* ═══════ COUNTDOWN Torneo 2026-2027 ═══════ */
 (function(){
-  // Offset +02:00 esplicito: il 26/09/2026 l'Italia è ancora in ora legale (CEST).
-  // Senza offset il browser userebbe il fuso locale del device.
-  var START = new Date('2026-09-26T17:00:00+02:00');
+  // Offset +02:00 esplicito: sia il 26/09 che il 10/10/2026 l'Italia è ancora
+  // in ora legale (CEST). Senza offset il browser userebbe il fuso del device.
+  var START = new Date('2026-09-26T17:00:00+02:00'); // inizio G1
+  var END   = new Date('2026-10-10T17:00:00+02:00'); // inizio G2: "Buon Torneo" si nasconde
+
+  // ── Messaggio di servizio ──────────────────────────────────────────
+  // Zona riutilizzabile: quando countdown e "Buon Torneo" non sono attivi
+  // (cioè dopo END), questo box resta libero e nascosto di default.
+  // Per mostrare un messaggio di servizio all'occorrenza (es. rinvio,
+  // pausa natalizia, avviso), basta valorizzare questo oggetto e ridistribuire:
+  //   SERVICE_MESSAGE = { enabled: true, text: 'Il tuo messaggio qui' };
+  var SERVICE_MESSAGE = {
+    enabled: false,
+    text: ''
+  };
+
+  var intervalId = null;
+  var state = null; // 'countdown' | 'message' | 'service' | 'hidden'
 
   function pad(n){ return String(n).padStart(2,'0'); }
   function unit(v,label){
@@ -973,21 +988,14 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
            '<div class="cd-name">'+label+'</div></div>';
   }
 
-  function tick(){
+  function renderCountdown(diff){
     var box = document.getElementById('cd-clock');
     if(!box) return;
-    var diff = START - Date.now();
-
-    if(diff <= 0){
-      box.innerHTML = '<div class="cd-live">&#9824; Il torneo &egrave; iniziato &#9824;</div>';
-      return;
-    }
     var s = Math.floor(diff/1000);
     var d = Math.floor(s/86400);
     var h = Math.floor(s%86400/3600);
     var m = Math.floor(s%3600/60);
     var sec = s%60;
-
     box.innerHTML =
       unit(d,'giorni')      + '<span class="cd-sep">:</span>' +
       unit(pad(h),'ore')    + '<span class="cd-sep">:</span>' +
@@ -995,9 +1003,51 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
       unit(pad(sec),'sec');
   }
 
+  function showMessage(){
+    var wrap = document.getElementById('countdown');
+    if(!wrap) return;
+    wrap.innerHTML = '<div class="cd-live">&#9824; Buon Torneo 2026/2027! &#9824;</div>';
+  }
+
+  function showServiceMessage(){
+    var wrap = document.getElementById('countdown');
+    if(!wrap) return;
+    wrap.style.display = '';
+    wrap.innerHTML = '<div class="cd-live">'+SERVICE_MESSAGE.text+'</div>';
+  }
+
+  function hideBox(){
+    var wrap = document.getElementById('countdown');
+    if(!wrap) return;
+    wrap.style.display = 'none';
+  }
+
+  function tick(){
+    var now = Date.now();
+
+    if(now >= END.getTime()){
+      var nextState = (SERVICE_MESSAGE.enabled && SERVICE_MESSAGE.text) ? 'service' : 'hidden';
+      if(state !== nextState){
+        state = nextState;
+        if(nextState === 'service') showServiceMessage(); else hideBox();
+        if(intervalId) clearInterval(intervalId); // countdown non più attivo
+      }
+      return;
+    }
+    if(now >= START.getTime()){
+      if(state !== 'message'){
+        state = 'message';
+        showMessage();
+      }
+      return;
+    }
+    state = 'countdown';
+    renderCountdown(START.getTime() - now);
+  }
+
   function startCountdown(){
     tick();
-    setInterval(tick, 1000);
+    intervalId = setInterval(tick, 1000);
   }
 
   if(document.readyState === 'loading'){
