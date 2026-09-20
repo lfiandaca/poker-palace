@@ -333,6 +333,16 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
         <div id="cal-admin"></div>
         <p class="hint">Inserisci la data di ogni giornata. Lascia vuoto se ancora da definire.</p>
       </div>
+      <div class="card">
+        <h3>&#127942; Campione (solo in caso di pareggio)</h3>
+        <label>Vincitore stagione 2026-2027</label>
+        <select id="in-campione"></select>
+        <button class="btn" onclick="saveCampione()">Salva Campione</button>
+        <p class="hint">Usa questo campo SOLO se a fine stagione la classifica resta in
+          perfetta parità (stessi punti e stesse finali) e serve indicare a mano il vincitore
+          dello spareggio. In condizioni normali il nome del campione viene mostrato in automatico
+          e questo campo va lasciato su &ldquo;&mdash;&rdquo;.</p>
+      </div>
     </section>
   </div>
 
@@ -345,7 +355,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.3</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.4</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -371,15 +381,19 @@ const winsCol   = collection(db,'wins_2627');
 const finalsCol = collection(db,'finals_2627');
 const calDoc    = doc(db,'meta','calendario_2627');
 const versionDoc= doc(db,'meta','version');
+const campioneDoc = doc(db,'meta','campione_2627');
 
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.3";
+const APP_VERSION = "23.4";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
 let wins=[], finals=[];
+// Nome scelto manualmente dall'admin, usato dal box "Campione" SOLO in caso di
+// parità perfetta (punti e finali) a fine stagione. Vuoto = nessun override.
+let campioneManuale = '';
 
 /* ── Calendario 2026-2027 (12 giornate) ── */
 const CAL_NEXT = [
@@ -545,6 +559,11 @@ function startListeners(){
     }
     renderCalendario();
   });
+  onSnapshot(campioneDoc, snap=>{
+    campioneManuale = snap.exists() ? (snap.data().nome||'') : '';
+    const sel = document.getElementById('in-campione');
+    if(sel) sel.value = campioneManuale || '\u2014';
+  });
 }
 
 /* ═══════ ADMIN ═══════ */
@@ -567,6 +586,11 @@ async function saveCalDate(idx,val){
 async function clearCalDate(idx){
   document.getElementById('cal-input-'+idx).value="";
   await saveCalDate(idx,"");
+}
+async function saveCampione(){
+  const v = document.getElementById('in-campione').value;
+  const nome = (v==='\u2014') ? '' : v;
+  await setDoc(campioneDoc,{nome,_secret:"PP2627"});
 }
 
 /* ═══════ STATS ═══════ */
@@ -901,12 +925,14 @@ window.generatePDF   = generatePDF;
 window.logoutAdmin   = logoutAdmin;
 window.activateAdminTab = activateAdminTab;
 window._archToggle   = archToggle;
+window.saveCampione  = saveCampione;
 
 /* ═══════ SETUP ═══════ */
 function initSelects(){
   const opts='<option>\u2014</option>'+PLAYERS.map(p=>`<option>${p}</option>`).join('');
   document.getElementById('in-winner').innerHTML=opts;
   document.getElementById('in-final').innerHTML=opts;
+  document.getElementById('in-campione').innerHTML=opts;
 }
 initSelects();
 renderPalmares();
@@ -963,93 +989,169 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
 
 /* ═══════ COUNTDOWN Torneo 2026-2027 ═══════ */
 (function(){
-  // Offset +02:00 esplicito: sia il 26/09 che il 10/10/2026 l'Italia è ancora
-  // in ora legale (CEST). Senza offset il browser userebbe il fuso del device.
-  var START = new Date('2026-09-26T17:00:00+02:00'); // inizio G1
-  var END   = new Date('2026-10-10T17:00:00+02:00'); // inizio G2: "Buon Torneo" si nasconde
+  var ROME_TZ = 'Europe/Rome';
 
-  // ── Messaggio di servizio ──────────────────────────────────────────
-  // Zona riutilizzabile: quando countdown e "Buon Torneo" non sono attivi
-  // (cioè dopo END), questo box resta libero e nascosto di default.
-  // Per mostrare un messaggio di servizio all'occorrenza (es. rinvio,
-  // pausa natalizia, avviso), basta valorizzare questo oggetto e ridistribuire:
-  //   SERVICE_MESSAGE = { enabled: true, text: 'Il tuo messaggio qui' };
-  var SERVICE_MESSAGE = {
-    enabled: false,
-    text: ''
-  };
+  // ── Conversione data/ora "locale Roma" → istante UTC, senza offset hardcoded ──
+  // Funziona automaticamente sia in CEST (+02:00) che in CET (+01:00), quindi
+  // vale per tutta la stagione (che attraversa il cambio ora del 25/10/2026)
+  // e per le stagioni future, senza dover ritoccare offset a mano ogni volta.
+  function getRomeOffsetMs(utcGuess){
+    var fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: ROME_TZ, hourCycle:'h23',
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+    var p = fmt.formatToParts(utcGuess).reduce(function(acc,x){
+      if(x.type!=='literal') acc[x.type]=parseInt(x.value,10); return acc;
+    },{});
+    var asUTC = Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);
+    return asUTC - utcGuess.getTime();
+  }
+  function romeToUTC(y,m,d,hh,mm){
+    var guess = new Date(Date.UTC(y,m-1,d,hh,mm,0));
+    var offset = getRomeOffsetMs(guess);
+    return new Date(guess.getTime() - offset);
+  }
+  function parseISO(s){ var p=s.split('-'); return {y:+p[0],m:+p[1],d:+p[2]}; }
+  function addDays(y,m,d,n){
+    var dt=new Date(Date.UTC(y,m-1,d)); dt.setUTCDate(dt.getUTCDate()+n);
+    return {y:dt.getUTCFullYear(),m:dt.getUTCMonth()+1,d:dt.getUTCDate()};
+  }
+  var GIORNI_IT=['Domenica','Luned\u00ec','Marted\u00ec','Mercoled\u00ec','Gioved\u00ec','Venerd\u00ec','Sabato'];
+  var MESI_IT=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio',
+               'agosto','settembre','ottobre','novembre','dicembre'];
+  function formatWhen(y,m,d){
+    var wd = new Date(Date.UTC(y,m-1,d)).getUTCDay();
+    return GIORNI_IT[wd]+' '+d+' '+MESI_IT[m-1]+' '+y+', ore 17:00';
+  }
+
+  // ── Messaggio di servizio: override manuale che ha SEMPRE la priorità ──
+  // (es. rinvio giornata, pausa festività). Per attivarlo: enabled:true + text,
+  // poi bump versione e redeploy. Nessun'altra modifica di codice necessaria.
+  var SERVICE_MESSAGE = { enabled:false, text:'' };
 
   var intervalId = null;
-  var state = null; // 'countdown' | 'message' | 'service' | 'hidden'
+  var lastKey = null; // evita di ridisegnare il DOM se lo stato non cambia
 
   function pad(n){ return String(n).padStart(2,'0'); }
-  function unit(v,label){
+  function unitHtml(v,label){
     return '<div class="cd-unit"><div class="cd-num">'+v+'</div>'+
            '<div class="cd-name">'+label+'</div></div>';
   }
 
-  function renderCountdown(diff){
-    var box = document.getElementById('cd-clock');
-    if(!box) return;
-    var s = Math.floor(diff/1000);
-    var d = Math.floor(s/86400);
-    var h = Math.floor(s%86400/3600);
-    var m = Math.floor(s%3600/60);
-    var sec = s%60;
-    box.innerHTML =
-      unit(d,'giorni')      + '<span class="cd-sep">:</span>' +
-      unit(pad(h),'ore')    + '<span class="cd-sep">:</span>' +
-      unit(pad(m),'min')    + '<span class="cd-sep">:</span>' +
-      unit(pad(sec),'sec');
-  }
-
-  function showMessage(){
-    var wrap = document.getElementById('countdown');
-    if(!wrap) return;
-    wrap.innerHTML = '<div class="cd-live">&#9824; Buon Torneo 2026/2027! &#9824;</div>';
-  }
-
-  function showServiceMessage(){
+  function renderCountdownBox(label, whenText){
     var wrap = document.getElementById('countdown');
     if(!wrap) return;
     wrap.style.display = '';
-    wrap.innerHTML = '<div class="cd-live">'+SERVICE_MESSAGE.text+'</div>';
+    wrap.innerHTML =
+      '<div class="cd-label">'+label+'</div>'+
+      '<div class="cd-clock" id="cd-clock"></div>'+
+      '<div class="cd-when">'+whenText+'</div>';
   }
-
+  function renderCountdownTick(diff){
+    var box = document.getElementById('cd-clock');
+    if(!box) return;
+    var s=Math.floor(diff/1000), d=Math.floor(s/86400),
+        h=Math.floor(s%86400/3600), mI=Math.floor(s%3600/60), sec=s%60;
+    box.innerHTML =
+      unitHtml(d,'giorni')     +'<span class="cd-sep">:</span>'+
+      unitHtml(pad(h),'ore')   +'<span class="cd-sep">:</span>'+
+      unitHtml(pad(mI),'min') +'<span class="cd-sep">:</span>'+
+      unitHtml(pad(sec),'sec');
+  }
+  function renderMessage(text){
+    var wrap = document.getElementById('countdown');
+    if(!wrap) return;
+    wrap.style.display = '';
+    wrap.innerHTML = '<div class="cd-live">&#9824; '+text+' &#9824;</div>';
+  }
+  function renderChampion(){
+    var wrap = document.getElementById('countdown');
+    if(!wrap) return;
+    wrap.style.display = '';
+    var name = campioneManuale;
+    if(!name){
+      var data = computeStats().sort(function(a,b){
+        return b.punti-a.punti || b.finali-a.finali;
+      });
+      var top = data[0], second = data[1];
+      var tie = second && top.punti===second.punti && top.finali===second.finali;
+      if(!tie) name = top ? top.name : '';
+    }
+    wrap.innerHTML =
+      '<div class="cd-live">&#9824; Complimenti al Campione 2026/2027! &#9824;</div>' +
+      (name ? '<div class="cd-when">'+name+'</div>' : '');
+  }
   function hideBox(){
     var wrap = document.getElementById('countdown');
     if(!wrap) return;
     wrap.style.display = 'none';
   }
 
-  function tick(){
-    var now = Date.now();
+  // ── Costruisce il calendario "risolto" in istanti UTC a partire dalle date
+  // in calendario (live da Firestore/CAL_NEXT) ──
+  function buildSchedule(){
+    var totalGiornate = calendario.length;
+    var out = [];
+    calendario.forEach(function(c){
+      if(!c.data) return;
+      var dt = parseISO(c.data);
+      var start = romeToUTC(dt.y,dt.m,dt.d,17,0);
+      var nd = addDays(dt.y,dt.m,dt.d,1);
+      var msgEnd = romeToUTC(nd.y,nd.m,nd.d,0,0);
+      out.push({g:c.g, y:dt.y, m:dt.m, d:dt.d, start:start, msgEnd:msgEnd,
+                isLastOfSeason:(c.g===totalGiornate)});
+    });
+    return out;
+  }
 
-    if(now >= END.getTime()){
-      var nextState = (SERVICE_MESSAGE.enabled && SERVICE_MESSAGE.text) ? 'service' : 'hidden';
-      if(state !== nextState){
-        state = nextState;
-        if(nextState === 'service') showServiceMessage(); else hideBox();
-        if(intervalId) clearInterval(intervalId); // countdown non più attivo
-      }
+  function tick(){
+    if(SERVICE_MESSAGE.enabled && SERVICE_MESSAGE.text){
+      if(lastKey!=='service'){ lastKey='service'; renderMessage(SERVICE_MESSAGE.text); }
       return;
     }
-    if(now >= START.getTime()){
-      if(state !== 'message'){
-        state = 'message';
-        showMessage();
-      }
+    var schedule = buildSchedule();
+    if(!schedule.length){
+      if(lastKey!=='hidden'){ lastKey='hidden'; hideBox(); }
       return;
     }
-    state = 'countdown';
-    renderCountdown(START.getTime() - now);
+    var now = Date.now();
+    for(var i=0;i<schedule.length;i++){
+      var item = schedule[i];
+      if(now < item.start.getTime()){
+        var key = 'cd'+item.g;
+        if(lastKey!==key){
+          lastKey=key;
+          var label = (item.g===1) ? "All'inizio del Torneo 2026 \u2013 2027" : ('Alla Giornata '+item.g);
+          renderCountdownBox(label, formatWhen(item.y,item.m,item.d));
+        }
+        renderCountdownTick(item.start.getTime()-now);
+        return;
+      }
+      if(now < item.msgEnd.getTime()){
+        var mkey = 'msg'+item.g;
+        if(lastKey!==mkey){
+          lastKey=mkey;
+          renderMessage(item.g===1 ? 'Buon Torneo 2026/2027!' : ('Giornata '+item.g+' in corso'));
+        }
+        return;
+      }
+      if(item.isLastOfSeason){
+        // Oltre la mezzanotte dell'ultima giornata: stato finale della stagione.
+        // Si ridisegna a ogni tick per riflettere eventuali aggiornamenti del
+        // campione manuale (l'override arriva via onSnapshot in tempo reale).
+        lastKey='champion';
+        renderChampion();
+        return;
+      }
+      // altrimenti si passa alla prossima giornata nel ciclo (loop continua)
+    }
   }
 
   function startCountdown(){
     tick();
     intervalId = setInterval(tick, 1000);
   }
-
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', startCountdown);
   } else {
