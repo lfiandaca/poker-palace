@@ -355,7 +355,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.4</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.5</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -386,7 +386,7 @@ const campioneDoc = doc(db,'meta','campione_2627');
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.4";
+const APP_VERSION = "23.5";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
@@ -960,33 +960,6 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
   renderAll();
   watchVersion();
 });
-</script>
-
-<script>
-/* ═══════ TAB SETUP — fuori dal module per compatibilità Safari iOS ═══════ */
-(function(){
-  function setupTabs(){
-    var tabs = document.querySelectorAll('#page-current .tab');
-    tabs.forEach(function(t){
-      function handler(e){
-        e.preventDefault();
-        document.querySelectorAll('#page-current .tab').forEach(function(x){x.classList.remove('active');});
-        document.querySelectorAll('#page-current .view').forEach(function(x){x.classList.remove('active');});
-        t.classList.add('active');
-        var view = document.getElementById(t.dataset.view);
-        if(view) view.classList.add('active');
-      }
-      t.addEventListener('click', handler);
-      t.addEventListener('touchend', handler, {passive:false});
-    });
-  }
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', setupTabs);
-  } else {
-    setupTabs();
-  }
-})();
-
 /* ═══════ COUNTDOWN Torneo 2026-2027 ═══════ */
 (function(){
   var ROME_TZ = 'Europe/Rome';
@@ -1156,6 +1129,32 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
     document.addEventListener('DOMContentLoaded', startCountdown);
   } else {
     startCountdown();
+  }
+})();
+</script>
+
+<script>
+/* ═══════ TAB SETUP — fuori dal module per compatibilità Safari iOS ═══════ */
+(function(){
+  function setupTabs(){
+    var tabs = document.querySelectorAll('#page-current .tab');
+    tabs.forEach(function(t){
+      function handler(e){
+        e.preventDefault();
+        document.querySelectorAll('#page-current .tab').forEach(function(x){x.classList.remove('active');});
+        document.querySelectorAll('#page-current .view').forEach(function(x){x.classList.remove('active');});
+        t.classList.add('active');
+        var view = document.getElementById(t.dataset.view);
+        if(view) view.classList.add('active');
+      }
+      t.addEventListener('click', handler);
+      t.addEventListener('touchend', handler, {passive:false});
+    });
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', setupTabs);
+  } else {
+    setupTabs();
   }
 })();
 </script>
