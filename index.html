@@ -12,7 +12,7 @@
 <title>Poker Palace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
@@ -21,6 +21,9 @@
   --cream:#f4ecd8; --ink:#0a1f17; --crimson:#9b1d20; --crimson-bright:#c0282b;
   --shadow:rgba(0,0,0,.45);
   --suit-red:#d83a3a; --suit-black:#1a1a1a;
+  --win-bg:rgba(92,184,92,.16); --win-bd:rgba(92,184,92,.35); --win-fg:#bfe8b5;
+  --fin-bg:rgba(216,58,58,.14); --fin-bd:rgba(216,58,58,.35); --fin-fg:#f2b3b3;
+  --live:#ff3b3b;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{
@@ -248,6 +251,44 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 .cd-sep{font-size:22px;color:var(--gold);opacity:.3;line-height:1.05}
 .cd-when{font-size:15px;font-style:italic;opacity:.6;margin-top:12px}
 .cd-live{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--gold-bright);padding:6px 0}
+.champ-name{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:clamp(22px,6vw,26px);letter-spacing:.5px;color:var(--gold-bright);margin-top:8px}
+.po-wait{font-size:20px;font-weight:600;color:var(--cream);margin-top:6px}
+
+/* ── Live box (finestra di gioco 17:00 → 01:00) — v23.6 ── */
+.live-box{position:relative;margin:0 0 20px;padding:14px 16px 16px;border:1px solid rgba(216,58,58,.45);border-radius:16px;background:linear-gradient(135deg,rgba(216,58,58,.08),rgba(0,0,0,.18));box-shadow:0 0 22px rgba(216,58,58,.12)}
+.live-box.done{border-color:rgba(212,175,55,.35);background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(212,175,55,.02));box-shadow:0 0 20px rgba(212,175,55,.07)}
+.live-head{position:absolute;top:12px;left:14px;display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-weight:400;font-size:13px;letter-spacing:1px;color:var(--live);animation:blink 1.1s ease-in-out infinite}
+.live-dot{width:9px;height:9px;border-radius:50%;background:var(--live);box-shadow:0 0 10px var(--live)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.live-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);opacity:.75;text-align:center;margin:0 0 12px;padding:0 44px}
+.match-list{display:flex;flex-direction:column;gap:6px}
+.match-row{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.03)}
+.match-n{font-family:'Cinzel',serif;font-weight:700;font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold);opacity:.85}
+.match-players{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:clamp(15px,4.2vw,18px);font-weight:600}
+.pl-win{padding:1px 8px;border-radius:7px;background:var(--win-bg);border:1px solid var(--win-bd);color:var(--win-fg)}
+.pl-fin{padding:1px 8px;border-radius:7px;background:var(--fin-bg);border:1px solid var(--fin-bd);color:var(--fin-fg)}
+.match-sep{opacity:.4}
+.match-row.pending .match-players{font-style:italic;font-size:15px;font-weight:500;opacity:.4}
+.match-row.playoff{border:1px solid rgba(240,216,120,.35);background:rgba(212,175,55,.07)}
+.match-row.playoff .match-n{color:var(--gold-bright);opacity:1}
+.match-row.pending.playoff .match-players{opacity:.75}
+.match-row.legacy .match-n{opacity:.5}
+.po-names{font-style:normal;color:var(--gold-bright);margin-left:4px}
+.po-note{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(240,216,120,.4);background:rgba(212,175,55,.08);font-size:16px;color:var(--gold-bright)}
+
+/* ── Tabellino giornate (Stats) — v23.6 ── */
+.gday-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.gday-card{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;cursor:pointer;border:1px solid rgba(212,175,55,.2);background:linear-gradient(100deg,rgba(255,255,255,.04),rgba(255,255,255,.01));transition:.25s;touch-action:manipulation}
+.gday-card.open{border-color:rgba(212,175,55,.55);background:rgba(212,175,55,.07)}
+.gday-title{font-size:18px;font-weight:600}
+.gday-title b{font-family:'Cinzel',serif;font-size:13px;letter-spacing:1px;color:var(--gold-bright);font-weight:700;text-transform:uppercase}
+.gday-live{display:inline-flex;align-items:center;gap:5px;margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:400;color:var(--live);animation:blink 1.1s ease-in-out infinite;vertical-align:middle}
+.gday-live .live-dot{width:7px;height:7px}
+.gday-arrow{font-size:16px;color:var(--gold);opacity:.5;transition:.3s;display:inline-block}
+.gday-card.open .gday-arrow{opacity:1;transform:rotate(90deg)}
+.gday-detail{display:none;padding:4px 2px 8px}
+.gday-detail.active{display:block;animation:fade .3s ease}
+.log-body{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -305,7 +346,9 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
         <thead><tr><th>Giocatore</th><th>Punti</th><th>Vittorie</th><th>Finali</th></tr></thead>
         <tbody id="stats-body"></tbody>
       </table></div>
-      <p class="hint">Punti = 5 per ogni partita vinta. In caso di parità, vale la classifica finali.</p>
+      <p class="hint">Punti = 5 per ogni partita vinta. In caso di parit&agrave; di punti all'ultima giornata, si gioca uno spareggio.</p>
+      <div class="board-title" style="margin-top:28px">Tabellino Giornate</div>
+      <div class="gday-list" id="gday-list"></div>
     </section>
     <section class="view" id="palmares">
       <div class="board-title">Palmarès</div>
@@ -315,14 +358,17 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
       <span class="demo-badge" id="admin-badge">&#9888; Modalit&agrave; Demo</span>
       <div class="card">
         <h3>Registra una partita</h3>
-        <label>Giornata</label>
-        <input type="number" id="in-giornata" min="1" value="1">
+        <div class="duo">
+          <div><label>Giornata</label><input type="number" id="in-giornata" min="1" value="1" oninput="window._refreshNextM()"></div>
+          <div><label>Partita n&deg;</label><input type="number" id="in-partita" min="1" value="1"></div>
+        </div>
         <div class="duo">
           <div><label>&#127942; Ha vinto (+5)</label><select id="in-winner"></select></div>
           <div><label>&#129352; In finale (+1)</label><select id="in-final"></select></div>
         </div>
-        <button class="btn" onclick="addMatch()">Registra Partita</button>
-        <p class="hint">Vittoria e finale sono indipendenti. Puoi registrarne solo una lasciando l'altra su &ldquo;&mdash;&rdquo;.</p>
+        <div id="po-note" class="po-note" style="display:none"></div>
+        <button class="btn" id="btn-add-match" onclick="addMatch()">Registra Partita</button>
+        <p class="hint">Giornata e numero partita sono precompilati (giornata in corso o prossima, prima partita libera). Vincitore e finalista sono entrambi obbligatori.</p>
       </div>
       <div class="card">
         <h3>Registro partite (<span id="match-count">0</span>)</h3>
@@ -334,14 +380,14 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
         <p class="hint">Inserisci la data di ogni giornata. Lascia vuoto se ancora da definire.</p>
       </div>
       <div class="card">
-        <h3>&#127942; Campione (solo in caso di pareggio)</h3>
+        <h3>&#127942; Campione (solo emergenza)</h3>
         <label>Vincitore stagione 2026-2027</label>
         <select id="in-campione"></select>
         <button class="btn" onclick="saveCampione()">Salva Campione</button>
-        <p class="hint">Usa questo campo SOLO se a fine stagione la classifica resta in
-          perfetta parità (stessi punti e stesse finali) e serve indicare a mano il vincitore
-          dello spareggio. In condizioni normali il nome del campione viene mostrato in automatico
-          e questo campo va lasciato su &ldquo;&mdash;&rdquo;.</p>
+        <p class="hint">Il campione &egrave; calcolato in automatico: primo per punti. In caso di
+          parit&agrave; di punti all'ultima giornata, lo spareggio si registra come partita
+          (vale +5 / +1 finale) e il campione esce da solo. Usa questo campo SOLO in emergenza
+          (es. spareggio non registrabile); altrimenti lascialo su &ldquo;&mdash;&rdquo;.</p>
       </div>
     </section>
   </div>
@@ -355,7 +401,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.5</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.6</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -363,7 +409,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc,
-         onSnapshot, setDoc, getDoc }
+         onSnapshot, setDoc, getDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 /* ── Firebase ── */
@@ -386,13 +432,13 @@ const campioneDoc = doc(db,'meta','campione_2627');
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.5";
+const APP_VERSION = "23.6";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
 let wins=[], finals=[];
-// Nome scelto manualmente dall'admin, usato dal box "Campione" SOLO in caso di
-// parità perfetta (punti e finali) a fine stagione. Vuoto = nessun override.
+// Nome scelto manualmente dall'admin: override di EMERGENZA del box "Campione".
+// Dal 2026-27 il campione è il primo per punti; la parità si scioglie con lo spareggio. Vuoto = nessun override.
 let campioneManuale = '';
 
 /* ── Calendario 2026-2027 (12 giornate) ── */
@@ -557,7 +603,7 @@ function startListeners(){
       const dates=snap.data().dates||[];
       calendario=dates.map((data,i)=>({g:i+1,data}));
     }
-    renderCalendario();
+    renderAll();   // v23.6: date agganciate anche a tabellino, box home e admin
   });
   onSnapshot(campioneDoc, snap=>{
     campioneManuale = snap.exists() ? (snap.data().nome||'') : '';
@@ -567,15 +613,54 @@ function startListeners(){
 }
 
 /* ═══════ ADMIN ═══════ */
+/* v23.6: una partita = 1 doc in wins + 1 doc in finals, accoppiati da {g, m}.
+   Campi: g (giornata), m (n\u00b0 partita), p, ts (serverTimestamp), po:true se spareggio. */
+let savingMatch = false;
 async function addMatch(){
-  const g=parseInt(document.getElementById('in-giornata').value)||1;
+  if(savingMatch) return;
+  const g=parseInt(document.getElementById('in-giornata').value);
+  const m=parseInt(document.getElementById('in-partita').value);
   const w=document.getElementById('in-winner').value;
   const f=document.getElementById('in-final').value;
-  if(w==='\u2014'&&f==='\u2014'){alert('Seleziona almeno un vincitore o un finalista');return;}
-  if(w!=='\u2014') await addDoc(winsCol,  {g,p:w,_secret:"PP2627"});
-  if(f!=='\u2014') await addDoc(finalsCol,{g,p:f,_secret:"PP2627"});
+  if(!g||!m){alert('Indica giornata e numero partita');return;}
+  if(w==='\u2014'||f==='\u2014'){alert('Seleziona sia il vincitore sia il finalista');return;}
+  if(w===f){alert('Vincitore e finalista devono essere diversi');return;}
+  if(getMatches(g).some(x=>x.m===m)){alert('La '+m+'a partita della Giornata '+g+' \u00e8 gi\u00e0 registrata');return;}
+  const po = isPlayoffFor(g);
+  if(po){
+    const L = tiedLeaders();
+    if(L.indexOf(w)<0||L.indexOf(f)<0){alert('Spareggio: vincitore e finalista devono essere tra '+L.join(', '));return;}
+  }
+  const base = {g, m, ts:serverTimestamp(), _secret:"PP2627"};
+  if(po) base.po = true;
+  const btn = document.getElementById('btn-add-match');
+  savingMatch = true; if(btn) btn.disabled = true;
+  try{
+    await Promise.all([
+      addDoc(winsCol,   {...base, p:w}),
+      addDoc(finalsCol, {...base, p:f})
+    ]);
+    document.getElementById('in-winner').value='\u2014';
+    document.getElementById('in-final').value='\u2014';
+  }catch(err){
+    console.warn(err); alert('Errore di salvataggio: riprova');
+  }finally{
+    savingMatch = false; if(btn) btn.disabled = false;
+    refreshNextM();
+  }
 }
+// elimina una partita (entrambi i documenti)
+async function delMatch(g,m){
+  if(!confirm('Eliminare la '+m+'a partita della Giornata '+g+'?')) return;
+  const ids = [
+    ...wins.filter(x=>x.g===g&&x.m===m).map(x=>['wins_2627',x._id]),
+    ...finals.filter(x=>x.g===g&&x.m===m).map(x=>['finals_2627',x._id])
+  ];
+  await Promise.all(ids.map(([c,id])=>deleteDoc(doc(db,c,id))));
+}
+// elimina un singolo documento (usato per i dati vecchi senza n\u00b0 partita)
 async function delEntry(list,docId){
+  if(!confirm('Eliminare questo dato?')) return;
   await deleteDoc(doc(db,list,docId));
 }
 async function saveCalDate(idx,val){
@@ -647,16 +732,28 @@ function renderStats(){
     <tr><td>${p.name}</td><td>${p.punti}</td><td>${p.wins}</td><td>${p.finali}</td></tr>`).join('');
 }
 function renderLog(){
-  document.getElementById('match-count').textContent=wins.length+' vittorie, '+finals.length+' finali';
+  const all=[];
+  playedGiornate().forEach(g=>all.push(...getMatches(g)));
+  all.sort((a,b)=>b.g-a.g||b.m-a.m);
+  const legW=wins.filter(x=>!hasM(x)), legF=finals.filter(x=>!hasM(x));
+  const nLeg=legW.length+legF.length;
+  document.getElementById('match-count').textContent=all.length+' partite'+(nLeg?' + '+nLeg+' dati senza n°':'');
   const log=document.getElementById('match-log');
-  if(!wins.length&&!finals.length){log.innerHTML='<div class="empty">Nessun dato registrato</div>';return;}
-  let html='';
-  [...wins].reverse().forEach(w=>{html+=`<div class="log-item">
-    <div><span class="log-meta">G${w.g}</span> &nbsp;<span class="log-win">&#127942; ${w.p}</span></div>
-    <button class="del" onclick="window._del('wins_2627','${w._id}')">&#10005;</button></div>`;});
-  [...finals].reverse().forEach(f=>{html+=`<div class="log-item">
-    <div><span class="log-meta">G${f.g}</span> &nbsp;<span class="log-run">&#129352; ${f.p} (finale)</span></div>
-    <button class="del" onclick="window._del('finals_2627','${f._id}')">&#10005;</button></div>`;});
+  if(!all.length&&!nLeg){log.innerHTML='<div class="empty">Nessun dato registrato</div>';return;}
+  let html=all.map(x=>`<div class="log-item">
+    <div class="log-body"><span class="log-meta">G${x.g} &middot; ${x.po?'SPAREGGIO':'P'+x.m}</span>
+      ${x.w?`<span class="pl-win">${x.w}</span>`:''}${x.f?`<span class="pl-fin">${x.f}</span>`:''}</div>
+    <button class="del" onclick="window._delMatch(${x.g},${x.m})">&#10005;</button></div>`).join('');
+  // dati registrati prima della v23.6 (senza n° partita): righe singole, eliminabili una per una
+  if(nLeg){
+    html+=`<div class="hint" style="margin:14px 0 4px">Dati senza n&deg; partita (versione precedente): eliminali e registra di nuovo le partite in ordine.</div>`;
+    [...legW].sort((a,b)=>b.g-a.g).forEach(w=>{html+=`<div class="log-item">
+      <div class="log-body"><span class="log-meta">G${w.g} &middot; senza n&deg;</span><span class="pl-win">&#127942; ${w.p}</span></div>
+      <button class="del" onclick="window._del('wins_2627','${w._id}')">&#10005;</button></div>`;});
+    [...legF].sort((a,b)=>b.g-a.g).forEach(f=>{html+=`<div class="log-item">
+      <div class="log-body"><span class="log-meta">G${f.g} &middot; senza n&deg;</span><span class="pl-fin">&#129352; ${f.p}</span></div>
+      <button class="del" onclick="window._del('finals_2627','${f._id}')">&#10005;</button></div>`;});
+  }
   log.innerHTML=html;
 }
 function renderCalendario(){
@@ -686,7 +783,9 @@ function renderCalendario(){
 function renderAll(){
   renderBoard(document.getElementById('board-punti'),'punti','pt');
   renderBoard(document.getElementById('board-finali'),'finali','fin');
-  renderStats();renderLog();renderCalendario();
+  renderStats();renderLog();renderCalendario();renderTabellino();
+  homeTick();          // aggiorna subito il box home (live/campione) a ogni cambio dati
+  refreshNextM();
 }
 
 /* ═══════ RENDER PALMARÈS ═══════ */
@@ -906,6 +1005,7 @@ function activateAdminTab(){
   document.querySelectorAll('#page-current .tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('#page-current .view').forEach(x=>x.classList.remove('active'));
   document.getElementById('admin').classList.add('active');
+  prefillAdmin();
 }
 function logoutAdmin(){
   document.querySelectorAll('#page-current .tab').forEach(x=>x.classList.remove('active'));
@@ -914,6 +1014,287 @@ function logoutAdmin(){
   document.getElementById('punti').classList.add('active');
   document.getElementById('btn-admin-header').style.display='none';
   document.getElementById('admin-logout').style.display='none';
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   v23.6 — FINESTRA DI GIOCO, LIVE, TABELLINO, SPAREGGIO, CAMPIONE
+   Tutto nel blocco module (accesso a wins/finals/calendario/campioneManuale).
+   Dichiarato PRIMA del primo renderAll(): nessuna variabile in TDZ.
+   ════════════════════════════════════════════════════════════════════ */
+
+// ── Messaggio di servizio: override con priorità ASSOLUTA sul box home ──
+// Per attivarlo: enabled:true + text, poi bump versione e redeploy.
+const SERVICE_MESSAGE = { enabled:false, text:'' };
+const LIVE_MATCHES    = 3;    // il live si chiude alla 3a partita registrata
+const BUON_TORNEO_MIN = 10;   // G1: minuti di "Buon Torneo" prima del riquadro live
+
+/* ── Fuso orario Europe/Rome, senza offset hardcoded ── */
+const ROME_TZ = 'Europe/Rome';
+const _romeFmt = new Intl.DateTimeFormat('en-US',{timeZone:ROME_TZ,hourCycle:'h23',
+  year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function getRomeOffsetMs(utcDate){
+  const p=_romeFmt.formatToParts(utcDate).reduce((a,x)=>{ if(x.type!=='literal') a[x.type]=parseInt(x.value,10); return a; },{});
+  return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second) - utcDate.getTime();
+}
+// Doppio passaggio: corretto anche a ridosso del cambio ora (es. 01:00 del 25/10/2026,
+// dove il calcolo a passaggio singolo della v23.5 sbagliava di un'ora).
+function romeToUTC(y,m,d,hh,mm){
+  const guess=new Date(Date.UTC(y,m-1,d,hh,mm,0));
+  const t1=guess.getTime()-getRomeOffsetMs(guess);
+  return new Date(guess.getTime()-getRomeOffsetMs(new Date(t1)));
+}
+function parseISO(s){ const p=s.split('-'); return {y:+p[0],m:+p[1],d:+p[2]}; }
+function addDays(y,m,d,n){ const dt=new Date(Date.UTC(y,m-1,d)); dt.setUTCDate(dt.getUTCDate()+n); return {y:dt.getUTCFullYear(),m:dt.getUTCMonth()+1,d:dt.getUTCDate()}; }
+const GIORNI_IT=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+const MESI_IT=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+function fmtLong(iso){ const d=parseISO(iso); return d.d+' '+MESI_IT[d.m-1]+' '+d.y; }
+function formatWhen(y,m,d){ const wd=new Date(Date.UTC(y,m-1,d)).getUTCDay(); return GIORNI_IT[wd]+' '+d+' '+MESI_IT[m-1]+' '+y+', ore 17:00'; }
+
+/* ── Calendario risolto: finestra di gioco 17:00 → 01:00 del giorno dopo ──
+   poCap = tetto del live per lo spareggio (12:00 del giorno dopo, solo ultima giornata) */
+function buildSchedule(){
+  const total=calendario.length, out=[];
+  calendario.forEach(c=>{
+    if(!c.data) return;
+    const dt=parseISO(c.data), nd=addDays(dt.y,dt.m,dt.d,1);
+    out.push({g:c.g, y:dt.y, m:dt.m, d:dt.d, data:c.data,
+      start:   romeToUTC(dt.y,dt.m,dt.d,17,0).getTime(),
+      liveEnd: romeToUTC(nd.y,nd.m,nd.d,1,0).getTime(),
+      poCap:   romeToUTC(nd.y,nd.m,nd.d,12,0).getTime(),
+      isLast:  c.g===total});
+  });
+  out.sort((a,b)=>a.start-b.start);
+  return out;
+}
+
+/* ── Partite: accoppiamento wins/finals per {g, m} ── */
+function hasM(x){ return typeof x.m==='number'; }
+function getMatches(g){
+  const map={};
+  const add=(x,key)=>{ if(x.g!==g||!hasM(x)) return; const r=(map[x.m]=map[x.m]||{g,m:x.m}); r[key]=x.p; if(x.po) r.po=true; };
+  wins.forEach(x=>add(x,'w')); finals.forEach(x=>add(x,'f'));
+  return Object.values(map).sort((a,b)=>a.m-b.m);
+}
+function legacyOf(g){ return { w:wins.filter(x=>x.g===g&&!hasM(x)), f:finals.filter(x=>x.g===g&&!hasM(x)) }; }
+// partite regolari (esclude spareggio); i vecchi dati senza n° contano come partite giocate
+function regularCount(g){ return getMatches(g).filter(x=>!x.po).length + legacyOf(g).w.length; }
+function hasPlayoff(g){ return getMatches(g).some(x=>x.po); }
+function playedGiornate(){ return [...new Set([...wins,...finals].map(x=>x.g))].sort((a,b)=>a-b); }
+function dataOf(g){ const c=calendario.find(x=>x.g===g); return c&&c.data?c.data:''; }
+
+/* ── Parità al primo posto: dal 2026-27 conta SOLO il punteggio ── */
+function tiedLeaders(){
+  const st=computeStats(), max=Math.max(...st.map(p=>p.punti));
+  return st.filter(p=>p.punti===max).map(p=>p.name);
+}
+// Spareggio necessario: ultima giornata, 3 partite regolari registrate, parità in testa, spareggio non registrato
+function playoffNeeded(item){
+  if(!item||!item.isLast) return false;
+  if(regularCount(item.g)<LIVE_MATCHES||hasPlayoff(item.g)) return false;
+  return tiedLeaders().length>1;
+}
+function isLiveNow(item){ return regularCount(item.g)<LIVE_MATCHES || playoffNeeded(item); }
+function lastItem(){ return buildSchedule().find(x=>x.isLast)||null; }
+function liveGiornata(){
+  const t=Date.now();
+  for(const it of buildSchedule()){
+    if(t>=it.start&&t<it.liveEnd) return it;
+    if(it.isLast&&t>=it.liveEnd&&t<it.poCap&&playoffNeeded(it)) return it;   // finestra allungata
+  }
+  return null;
+}
+function championName(){
+  if(campioneManuale) return campioneManuale;
+  const lead=tiedLeaders();
+  return lead.length===1 ? lead[0] : '';
+}
+
+/* ── Righe partita (vincitore sempre a sinistra, verde; finalista rosso) ── */
+function matchRowHTML(x){
+  const w=x.w?'<span class="pl-win">'+x.w+'</span>':'', f=x.f?'<span class="pl-fin">'+x.f+'</span>':'';
+  return '<div class="match-row'+(x.po?' playoff':'')+'"><div class="match-n">'+(x.po?'Spareggio':x.m+'a partita')+'</div>'+
+         '<div class="match-players">'+w+(w&&f?'<span class="match-sep">&ndash;</span>':'')+f+'</div></div>';
+}
+function legacyRowHTML(g){
+  const L=legacyOf(g); if(!L.w.length&&!L.f.length) return '';
+  return '<div class="match-row legacy"><div class="match-n">Ordine n.d.</div><div class="match-players">'+
+    L.w.map(x=>'<span class="pl-win">'+x.p+'</span>').join('')+L.f.map(x=>'<span class="pl-fin">'+x.p+'</span>').join('')+'</div></div>';
+}
+function pendingRowHTML(m,current){
+  return '<div class="match-row pending"><div class="match-n">'+m+'a partita</div><div class="match-players">'+(current?'in corso&hellip;':'&mdash;')+'</div></div>';
+}
+function pendingPlayoffHTML(){
+  return '<div class="match-row pending playoff"><div class="match-n">Spareggio</div><div class="match-players">in corso&hellip; <span class="po-names">'+tiedLeaders().join(' &middot; ')+'</span></div></div>';
+}
+
+/* ── Coriandoli (canvas, nessuna libreria; tempo-based, versione tranquilla con "Riduci movimento") ── */
+let confettiRunning=false;
+function launchConfetti(){
+  if(confettiRunning) return;
+  const calm=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  confettiRunning=true;
+  const cv=document.createElement('canvas');
+  cv.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+  document.body.appendChild(cv);
+  const ctx=cv.getContext('2d'), dpr=window.devicePixelRatio||1, W=innerWidth, H=innerHeight;
+  cv.width=W*dpr; cv.height=H*dpr; ctx.scale(dpr,dpr);
+  const COLORS=['#f0d878','#d4af37','#f4ecd8','#d83a3a','#5cb85c','#ffffff'];
+  const N=Math.min(calm?60:180, Math.round(W/(calm?6:2.2))), parts=[];
+  for(let i=0;i<N;i++) parts.push({
+    x:Math.random()*W, y:-20-Math.random()*H*0.6, w:5+Math.random()*6, h:8+Math.random()*8,
+    vx:calm?0:-1.2+Math.random()*2.4, vy:calm?1.2+Math.random()*1.2:2+Math.random()*3,
+    rot:Math.random()*Math.PI*2, vr:calm?0:-0.2+Math.random()*0.4,
+    sway:Math.random()*Math.PI*2, swayAmp:calm?0:0.8, c:COLORS[i%COLORS.length], round:Math.random()<0.25});
+  const t0=performance.now(), DUR=5000; let prev=t0;
+  (function frame(t){
+    const k=Math.min(3,(t-prev)/16.67); prev=t;
+    const el=t-t0, fade=el>DUR-1200?Math.max(0,(DUR-el)/1200):1;
+    ctx.clearRect(0,0,W,H);
+    parts.forEach(p=>{
+      p.sway+=0.05*k; p.x+=(p.vx+Math.sin(p.sway)*p.swayAmp)*k; p.y+=p.vy*k; p.rot+=p.vr*k;
+      ctx.save(); ctx.globalAlpha=fade; ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.c;
+      if(p.round){ ctx.beginPath(); ctx.arc(0,0,p.w/2,0,Math.PI*2); ctx.fill(); }
+      else { const hh=p.h*Math.abs(Math.cos(p.rot)); ctx.fillRect(-p.w/2,-hh/2,p.w,hh+1); }
+      ctx.restore();
+    });
+    if(el<DUR) requestAnimationFrame(frame); else { cv.remove(); confettiRunning=false; }
+  })(t0);
+}
+
+/* ── Box home (#countdown) ── */
+let homeLastKey=null;
+function homeBox(){ const b=document.getElementById('countdown'); if(b){ b.onclick=null; b.style.cursor=''; b.style.display=''; } return b; }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function unitHtml(v,l){ return '<div class="cd-unit"><div class="cd-num">'+v+'</div><div class="cd-name">'+l+'</div></div>'; }
+function renderCountdownBox(label,when){
+  const b=homeBox(); if(!b) return; b.className='countdown';
+  b.innerHTML='<div class="cd-label">'+label+'</div><div class="cd-clock" id="cd-clock"></div><div class="cd-when">'+when+'</div>';
+}
+function renderCountdownTick(diff){
+  const c=document.getElementById('cd-clock'); if(!c) return;
+  const s=Math.floor(diff/1000), d=Math.floor(s/86400), h=Math.floor(s%86400/3600), mi=Math.floor(s%3600/60), se=s%60;
+  c.innerHTML=unitHtml(d,'giorni')+'<span class="cd-sep">:</span>'+unitHtml(pad2(h),'ore')+'<span class="cd-sep">:</span>'+unitHtml(pad2(mi),'min')+'<span class="cd-sep">:</span>'+unitHtml(pad2(se),'sec');
+}
+function renderMessage(text){
+  const b=homeBox(); if(!b) return; b.className='countdown';
+  b.innerHTML='<div class="cd-live">&#9824; '+text+' &#9824;</div>';
+}
+function championHTML(){
+  const name=championName();
+  return '<div class="cd-live">&#9824; Complimenti al Campione &#9824;</div><div class="cd-label">Stagione 2026 / 2027</div>'+
+         (name?'<div class="champ-name">'+name+'</div>':'');
+}
+function renderChampion(){
+  const b=homeBox(); if(!b) return; b.className='countdown';
+  b.innerHTML=championHTML();
+  if(championName()){ b.onclick=launchConfetti; b.style.cursor='pointer'; launchConfetti(); }
+}
+function renderPlayoffWait(){
+  const b=homeBox(); if(!b) return; b.className='countdown';
+  b.innerHTML='<div class="cd-live">&#9876; Spareggio da disputare &#9876;</div><div class="po-wait">'+tiedLeaders().join(' &middot; ')+'</div>';
+}
+function renderLive(item){
+  const ms=getMatches(item.g), live=isLiveNow(item);
+  const rows=ms.map(matchRowHTML); const leg=legacyRowHTML(item.g); if(leg) rows.push(leg);
+  if(regularCount(item.g)<LIVE_MATCHES){
+    const maxM=ms.length?ms[ms.length-1].m:0;
+    for(let m=maxM+1;m<=LIVE_MATCHES;m++) rows.push(pendingRowHTML(m,m===maxM+1));
+  } else if(playoffNeeded(item)) rows.push(pendingPlayoffHTML());
+  const b=homeBox(); if(!b) return; b.className='live-box'+(live?'':' done');
+  // ultima giornata con campione deciso: subito il campione in testa, partite sotto fino all'01:00
+  const champHead=(item.isLast&&!live)?'<div style="text-align:center">'+championHTML()+'</div>':'';
+  b.innerHTML=(live?'<div class="live-head"><span class="live-dot"></span>live</div>':'')+champHead+
+    '<div class="live-title"'+(champHead?' style="margin-top:14px"':'')+'>Giornata '+item.g+' &middot; '+fmtLong(item.data)+'</div>'+
+    '<div class="match-list">'+rows.join('')+'</div>';
+  if(champHead){ b.onclick=launchConfetti; b.style.cursor='pointer'; launchConfetti(); }
+}
+function sigOf(g){ return getMatches(g).map(x=>x.m+x.w+x.f+(x.po?'po':'')).join('|')+'#'+wins.length+'.'+finals.length+'#'+campioneManuale; }
+
+function homeTick(){
+  if(SERVICE_MESSAGE.enabled&&SERVICE_MESSAGE.text){
+    if(homeLastKey!=='service'){ homeLastKey='service'; renderMessage(SERVICE_MESSAGE.text); } return;
+  }
+  const s=buildSchedule(), t=Date.now();
+  const hide=()=>{ if(homeLastKey!=='hidden'){ homeLastKey='hidden'; const b=document.getElementById('countdown'); if(b) b.style.display='none'; } };
+  if(!s.length){ hide(); return; }
+  for(const it of s){
+    if(t<it.start){
+      const key='cd'+it.g+'#'+it.data;
+      if(homeLastKey!==key){ homeLastKey=key;
+        renderCountdownBox(it.g===1?"All'inizio del Torneo 2026 – 2027":'Alla Giornata '+it.g, formatWhen(it.y,it.m,it.d)); }
+      renderCountdownTick(it.start-t);
+      return;
+    }
+    if(t<it.liveEnd){
+      if(it.g===1&&t<it.start+BUON_TORNEO_MIN*60000){
+        if(homeLastKey!=='buon'){ homeLastKey='buon'; renderMessage('Buon Torneo 2026/2027!'); } return;
+      }
+      const lk='live'+it.g+'#'+it.data+'#'+sigOf(it.g);
+      if(homeLastKey!==lk){ homeLastKey=lk; renderLive(it); }
+      return;
+    }
+    if(it.isLast){
+      if(playoffNeeded(it)){
+        if(t<it.poCap){ const pk='live'+it.g+'#'+it.data+'#'+sigOf(it.g); if(homeLastKey!==pk){ homeLastKey=pk; renderLive(it); } }
+        else { const wk='powait'+tiedLeaders().join(); if(homeLastKey!==wk){ homeLastKey=wk; renderPlayoffWait(); } }
+        return;
+      }
+      const ck='champ'+championName();
+      if(homeLastKey!==ck){ homeLastKey=ck; renderChampion(); }
+      return;
+    }
+  }
+  hide();   // nessuna giornata futura con data nota
+}
+
+/* ── Tabellino giornate (Stats): solo giornate con partite, una aperta alla volta ── */
+let openG=null, lastLiveSig=null;
+function renderTabellino(){
+  const el=document.getElementById('gday-list'); if(!el) return;
+  const gs=playedGiornate();
+  if(!gs.length){ el.innerHTML='<div class="empty">Nessuna partita registrata</div>'; return; }
+  const lg=liveGiornata();
+  el.innerHTML=gs.map(g=>{
+    const d=dataOf(g), badge=lg&&lg.g===g&&isLiveNow(lg), open=openG===g;
+    return '<div class="gday-card'+(open?' open':'')+'" onclick="window._toggleG('+g+')">'+
+        '<div class="gday-title"><b>Giornata '+g+'</b> &ndash; '+(d?fmtLong(d):'data da definire')+
+        (badge?'<span class="gday-live"><span class="live-dot"></span>live</span>':'')+'</div>'+
+        '<span class="gday-arrow">&#9654;</span></div>'+
+      '<div class="gday-detail'+(open?' active':'')+'"><div class="match-list">'+
+        getMatches(g).map(matchRowHTML).join('')+legacyRowHTML(g)+'</div></div>';
+  }).join('');
+}
+function toggleG(g){ openG=(openG===g)?null:g; renderTabellino(); }
+// il badge live del tabellino dipende anche dall'orario: ricalcolo quando cambia lo stato
+setInterval(()=>{
+  const lg=liveGiornata(), k=lg?lg.g+':'+isLiveNow(lg):'none';
+  if(k!==lastLiveSig){ lastLiveSig=k; renderTabellino(); }
+},1000);
+
+/* ── Admin: precompilazione giornata / n° partita, avviso spareggio ── */
+function nextM(g){ const ms=getMatches(g); return ms.length?Math.max(...ms.map(x=>x.m))+1:legacyOf(g).w.length+1; }
+function suggestedG(){
+  const t=Date.now(), s=buildSchedule();
+  for(const it of s){
+    if(t<it.liveEnd) return it.g;
+    if(it.isLast&&playoffNeeded(it)) return it.g;
+  }
+  return s.length?s[s.length-1].g:1;
+}
+function isPlayoffFor(g){ const L=lastItem(); return !!(L&&L.g===g&&playoffNeeded(L)); }
+function refreshNextM(){
+  const gi=document.getElementById('in-giornata'), pi=document.getElementById('in-partita'), note=document.getElementById('po-note');
+  if(!gi||!pi) return;
+  const g=parseInt(gi.value);
+  if(g) pi.value=nextM(g);
+  if(note){
+    if(g&&isPlayoffFor(g)){ note.style.display=''; note.innerHTML='&#9876; <b>Spareggio</b> tra '+tiedLeaders().join(', ')+' &mdash; vale come partita normale (+5 / +1 finale).'; }
+    else note.style.display='none';
+  }
+}
+function prefillAdmin(){
+  const gi=document.getElementById('in-giornata'); if(!gi) return;
+  gi.value=suggestedG(); refreshNextM();
 }
 
 /* ═══════ ESPONI AL DOM ═══════ */
@@ -926,6 +1307,9 @@ window.logoutAdmin   = logoutAdmin;
 window.activateAdminTab = activateAdminTab;
 window._archToggle   = archToggle;
 window.saveCampione  = saveCampione;
+window._delMatch     = delMatch;
+window._toggleG      = toggleG;
+window._refreshNextM = refreshNextM;
 
 /* ═══════ SETUP ═══════ */
 function initSelects(){
@@ -960,177 +1344,8 @@ seedIfEmpty().then(()=>{ startListeners(); watchVersion(); }).catch(err=>{
   renderAll();
   watchVersion();
 });
-/* ═══════ COUNTDOWN Torneo 2026-2027 ═══════ */
-(function(){
-  var ROME_TZ = 'Europe/Rome';
-
-  // ── Conversione data/ora "locale Roma" → istante UTC, senza offset hardcoded ──
-  // Funziona automaticamente sia in CEST (+02:00) che in CET (+01:00), quindi
-  // vale per tutta la stagione (che attraversa il cambio ora del 25/10/2026)
-  // e per le stagioni future, senza dover ritoccare offset a mano ogni volta.
-  function getRomeOffsetMs(utcGuess){
-    var fmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: ROME_TZ, hourCycle:'h23',
-      year:'numeric', month:'2-digit', day:'2-digit',
-      hour:'2-digit', minute:'2-digit', second:'2-digit'
-    });
-    var p = fmt.formatToParts(utcGuess).reduce(function(acc,x){
-      if(x.type!=='literal') acc[x.type]=parseInt(x.value,10); return acc;
-    },{});
-    var asUTC = Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);
-    return asUTC - utcGuess.getTime();
-  }
-  function romeToUTC(y,m,d,hh,mm){
-    var guess = new Date(Date.UTC(y,m-1,d,hh,mm,0));
-    var offset = getRomeOffsetMs(guess);
-    return new Date(guess.getTime() - offset);
-  }
-  function parseISO(s){ var p=s.split('-'); return {y:+p[0],m:+p[1],d:+p[2]}; }
-  function addDays(y,m,d,n){
-    var dt=new Date(Date.UTC(y,m-1,d)); dt.setUTCDate(dt.getUTCDate()+n);
-    return {y:dt.getUTCFullYear(),m:dt.getUTCMonth()+1,d:dt.getUTCDate()};
-  }
-  var GIORNI_IT=['Domenica','Luned\u00ec','Marted\u00ec','Mercoled\u00ec','Gioved\u00ec','Venerd\u00ec','Sabato'];
-  var MESI_IT=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio',
-               'agosto','settembre','ottobre','novembre','dicembre'];
-  function formatWhen(y,m,d){
-    var wd = new Date(Date.UTC(y,m-1,d)).getUTCDay();
-    return GIORNI_IT[wd]+' '+d+' '+MESI_IT[m-1]+' '+y+', ore 17:00';
-  }
-
-  // ── Messaggio di servizio: override manuale che ha SEMPRE la priorità ──
-  // (es. rinvio giornata, pausa festività). Per attivarlo: enabled:true + text,
-  // poi bump versione e redeploy. Nessun'altra modifica di codice necessaria.
-  var SERVICE_MESSAGE = { enabled:false, text:'' };
-
-  var intervalId = null;
-  var lastKey = null; // evita di ridisegnare il DOM se lo stato non cambia
-
-  function pad(n){ return String(n).padStart(2,'0'); }
-  function unitHtml(v,label){
-    return '<div class="cd-unit"><div class="cd-num">'+v+'</div>'+
-           '<div class="cd-name">'+label+'</div></div>';
-  }
-
-  function renderCountdownBox(label, whenText){
-    var wrap = document.getElementById('countdown');
-    if(!wrap) return;
-    wrap.style.display = '';
-    wrap.innerHTML =
-      '<div class="cd-label">'+label+'</div>'+
-      '<div class="cd-clock" id="cd-clock"></div>'+
-      '<div class="cd-when">'+whenText+'</div>';
-  }
-  function renderCountdownTick(diff){
-    var box = document.getElementById('cd-clock');
-    if(!box) return;
-    var s=Math.floor(diff/1000), d=Math.floor(s/86400),
-        h=Math.floor(s%86400/3600), mI=Math.floor(s%3600/60), sec=s%60;
-    box.innerHTML =
-      unitHtml(d,'giorni')     +'<span class="cd-sep">:</span>'+
-      unitHtml(pad(h),'ore')   +'<span class="cd-sep">:</span>'+
-      unitHtml(pad(mI),'min') +'<span class="cd-sep">:</span>'+
-      unitHtml(pad(sec),'sec');
-  }
-  function renderMessage(text){
-    var wrap = document.getElementById('countdown');
-    if(!wrap) return;
-    wrap.style.display = '';
-    wrap.innerHTML = '<div class="cd-live">&#9824; '+text+' &#9824;</div>';
-  }
-  function renderChampion(){
-    var wrap = document.getElementById('countdown');
-    if(!wrap) return;
-    wrap.style.display = '';
-    var name = campioneManuale;
-    if(!name){
-      var data = computeStats().sort(function(a,b){
-        return b.punti-a.punti || b.finali-a.finali;
-      });
-      var top = data[0], second = data[1];
-      var tie = second && top.punti===second.punti && top.finali===second.finali;
-      if(!tie) name = top ? top.name : '';
-    }
-    wrap.innerHTML =
-      '<div class="cd-live">&#9824; Complimenti al Campione 2026/2027! &#9824;</div>' +
-      (name ? '<div class="cd-when">'+name+'</div>' : '');
-  }
-  function hideBox(){
-    var wrap = document.getElementById('countdown');
-    if(!wrap) return;
-    wrap.style.display = 'none';
-  }
-
-  // ── Costruisce il calendario "risolto" in istanti UTC a partire dalle date
-  // in calendario (live da Firestore/CAL_NEXT) ──
-  function buildSchedule(){
-    var totalGiornate = calendario.length;
-    var out = [];
-    calendario.forEach(function(c){
-      if(!c.data) return;
-      var dt = parseISO(c.data);
-      var start = romeToUTC(dt.y,dt.m,dt.d,17,0);
-      var nd = addDays(dt.y,dt.m,dt.d,1);
-      var msgEnd = romeToUTC(nd.y,nd.m,nd.d,0,0);
-      out.push({g:c.g, y:dt.y, m:dt.m, d:dt.d, start:start, msgEnd:msgEnd,
-                isLastOfSeason:(c.g===totalGiornate)});
-    });
-    return out;
-  }
-
-  function tick(){
-    if(SERVICE_MESSAGE.enabled && SERVICE_MESSAGE.text){
-      if(lastKey!=='service'){ lastKey='service'; renderMessage(SERVICE_MESSAGE.text); }
-      return;
-    }
-    var schedule = buildSchedule();
-    if(!schedule.length){
-      if(lastKey!=='hidden'){ lastKey='hidden'; hideBox(); }
-      return;
-    }
-    var now = Date.now();
-    for(var i=0;i<schedule.length;i++){
-      var item = schedule[i];
-      if(now < item.start.getTime()){
-        var key = 'cd'+item.g;
-        if(lastKey!==key){
-          lastKey=key;
-          var label = (item.g===1) ? "All'inizio del Torneo 2026 \u2013 2027" : ('Alla Giornata '+item.g);
-          renderCountdownBox(label, formatWhen(item.y,item.m,item.d));
-        }
-        renderCountdownTick(item.start.getTime()-now);
-        return;
-      }
-      if(now < item.msgEnd.getTime()){
-        var mkey = 'msg'+item.g;
-        if(lastKey!==mkey){
-          lastKey=mkey;
-          renderMessage(item.g===1 ? 'Buon Torneo 2026/2027!' : ('Giornata '+item.g+' in corso'));
-        }
-        return;
-      }
-      if(item.isLastOfSeason){
-        // Oltre la mezzanotte dell'ultima giornata: stato finale della stagione.
-        // Si ridisegna a ogni tick per riflettere eventuali aggiornamenti del
-        // campione manuale (l'override arriva via onSnapshot in tempo reale).
-        lastKey='champion';
-        renderChampion();
-        return;
-      }
-      // altrimenti si passa alla prossima giornata nel ciclo (loop continua)
-    }
-  }
-
-  function startCountdown(){
-    tick();
-    intervalId = setInterval(tick, 1000);
-  }
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', startCountdown);
-  } else {
-    startCountdown();
-  }
-})();
+/* ═══════ AVVIO BOX HOME (countdown / live / campione) ═══════ */
+setInterval(homeTick, 1000);
 </script>
 
 <script>
