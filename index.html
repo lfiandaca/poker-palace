@@ -401,7 +401,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.6</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.7</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -432,7 +432,7 @@ const campioneDoc = doc(db,'meta','campione_2627');
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.6";
+const APP_VERSION = "23.7";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
@@ -953,7 +953,7 @@ function generatePDF(){
   doc.setFontSize(12);doc.setFont('times','italic');doc.setTextColor(...LIGHT);
   doc.text('Stagione 2026 - 2027',W/2,29,{align:'center'});
   doc.setFontSize(9);doc.setFont('helvetica','normal');
-  doc.text(`Report del ${dateStr} alle ${timeStr}  -  Giornate: ${giornate}  -  Vittorie: ${wins.length}  -  Finali: ${finals.length}`,W/2,37,{align:'center'});
+  doc.text(`Report del ${dateStr} alle ${timeStr}`,W/2,37,{align:'center'});
   let y=56;
   const dT=(t)=>{doc.setFillColor(...GOLD);doc.rect(14,y-5,W-28,8,'F');
     doc.setTextColor(255,255,255);doc.setFont('times','bold');doc.setFontSize(12);
@@ -963,24 +963,61 @@ function generatePDF(){
     doc.setFont('helvetica',opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
     doc.setTextColor(...(opts.color||INK));
     cells.forEach((c,i)=>{doc.text(String(c),x+2,y,{align:opts.align?.[i]||'left'});x+=widths[i];});y+=8;};
-  const wP=[14,90,52];
-  dT('CLASSIFICA PUNTI');
-  tR(['#','Giocatore','Punti'],wP,{fill:FELT,color:[212,175,55],bold:true});
-  [...stats].sort((a,b)=>b.punti-a.punti||b.finali-a.finali).forEach((p,i)=>
-    tR([i+1,p.name,p.punti],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
-  y+=8;
-  dT('CLASSIFICA FINALI');
-  tR(['#','Giocatore','Finali'],wP,{fill:FELT,color:[212,175,55],bold:true});
-  [...stats].sort((a,b)=>b.finali-a.finali||b.punti-a.punti).forEach((p,i)=>
-    tR([i+1,p.name,p.finali],wP,{fill:i%2?[245,242,232]:[255,255,255],bold:i===0}));
-  y+=8;
   const wS=[58,34,34,40];
-  dT('STATISTICHE COMPLETE');
+  dT('CLASSIFICA');
   tR(['Giocatore','Punti','Vittorie','Finali'],wS,{fill:FELT,color:[212,175,55],bold:true});
   [...stats].sort((a,b)=>b.punti-a.punti||b.finali-a.finali).forEach((p,i)=>
     tR([p.name,p.punti,p.wins,p.finali],wS,{fill:i%2?[245,242,232]:[255,255,255]}));
-  doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','italic');
-  doc.text('Generato da Poker Palace - 5 punti per partita vinta, 1 punto per finale raggiunta',W/2,288,{align:'center'});
+  /* ── v23.7: Tabellino giornate (stessi dati della sezione Stats, al momento del download) ── */
+  const PAGE_BOTTOM=278;
+  const gs=playedGiornate();
+  if(gs.length){
+    const WINC=[40,120,50], FINC=[175,40,40], xP=18, xW=62, xF=132;
+    let lg=null; try{ lg=liveGiornata(); }catch(e){}
+    // titolo sezione + intestazione colonne: ridisegnati in testa a ogni nuova pagina
+    const tabHead=(segue)=>{
+      dT('TABELLINO GIORNATE'+(segue?' (segue)':''));
+      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(120,120,120);
+      doc.text('PARTITA',xP,y-1);doc.text('VINCITORE (+5)',xW,y-1);doc.text('FINALE PERSA (+1)',xF,y-1);
+      y+=6;
+    };
+    const firstH=9+(getMatches(gs[0]).length+((legacyOf(gs[0]).w.length||legacyOf(gs[0]).f.length)?1:0))*7+3;
+    y+=8;
+    if(y+12+6+firstH>PAGE_BOTTOM){ doc.addPage(); y=22; }
+    tabHead(false);
+    gs.forEach(g=>{
+      const ms=getMatches(g), L=legacyOf(g), hasLeg=L.w.length||L.f.length;
+      const nRows=ms.length+(hasLeg?1:0);
+      // una giornata non si spezza: se non ci sta, pagina nuova con tabella nuova (titolo + intestazione)
+      if(y+9+nRows*7+3>PAGE_BOTTOM){ doc.addPage(); y=22; tabHead(true); }
+      const d=dataOf(g), inCorso=!!(lg&&lg.g===g&&isLiveNow(lg));
+      doc.setFillColor(...FELT);doc.rect(14,y-5.5,W-28,8,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(212,175,55);
+      doc.text(`Giornata ${g} - ${d?fmtLong(d):'data da definire'}${inCorso?'   (in corso)':''}`,18,y);
+      y+=8;
+      const row=(lab,w,f,i,po)=>{
+        doc.setFillColor(...(po?[250,240,200]:(i%2?[245,242,232]:[255,255,255])));
+        doc.rect(14,y-4.8,W-28,7,'F');
+        doc.setFont('helvetica',po?'bold':'normal');doc.setFontSize(9);doc.setTextColor(...INK);
+        doc.text(lab,xP,y);
+        doc.setFont('helvetica','bold');doc.setFontSize(10);
+        doc.setTextColor(...WINC);doc.text(w||'-',xW,y);
+        doc.setTextColor(...FINC);doc.text(f||'-',xF,y);
+        y+=7;
+      };
+      ms.forEach((x,i)=>row(x.po?'Spareggio':`${x.m}a partita`,x.w,x.f,i,x.po));
+      if(hasLeg) row('Ordine n.d.',L.w.map(x=>x.p).join(', '),L.f.map(x=>x.p).join(', '),ms.length,false);
+      y+=3;
+    });
+  }
+  // footer su ogni pagina (+ numero pagina se più di una)
+  const nP=doc.getNumberOfPages();
+  for(let i=1;i<=nP;i++){
+    doc.setPage(i);
+    doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setFont('helvetica','italic');
+    doc.text('Generato da Poker Palace - 5 punti per partita vinta, 1 punto per finale raggiunta',W/2,288,{align:'center'});
+    if(nP>1) doc.text(`${i}/${nP}`,W-14,288,{align:'right'});
+  }
   doc.save(`PokerPalace_G${giornate}_${now.toISOString().slice(0,10)}.pdf`);
 }
 
