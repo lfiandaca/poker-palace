@@ -380,6 +380,11 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
         <p class="hint">Inserisci la data di ogni giornata. Lascia vuoto se ancora da definire.</p>
       </div>
       <div class="card">
+        <h3>&#128190; Backup dati</h3>
+        <button class="btn" style="margin-top:4px" onclick="backupData()">Scarica Backup</button>
+        <p class="hint">Scarica un file JSON con tutte le partite, il calendario e il campione della stagione in corso. Consigliato dopo ogni giornata. L'archivio storico &egrave; gi&agrave; nel file dell'app.</p>
+      </div>
+      <div class="card">
         <h3>&#127942; Campione (solo emergenza)</h3>
         <label>Vincitore stagione 2026-2027</label>
         <select id="in-campione"></select>
@@ -401,7 +406,7 @@ select:focus,input:focus{outline:none;border-color:var(--gold)}
 
 </div><!-- /wrap -->
 
-<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v23.9</footer>
+<footer id="app-footer" style="text-align:center;padding:18px 0 8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);opacity:.35;position:relative;z-index:1">v24.0</footer>
 
 <!-- ═══════════════════════════════════════════════════════
      SCRIPT
@@ -432,7 +437,7 @@ const campioneDoc = doc(db,'meta','campione_2627');
 // Versione locale di questo file. DEVE combaciare col footer e con meta/version.v
 // su Firestore. Per pubblicare un aggiornamento: cambia qui, ricarica su GitHub,
 // poi aggiorna meta/version.v su Firestore con lo stesso numero.
-const APP_VERSION = "23.9";
+const APP_VERSION = "24.0";
 
 /* ── Stato corrente ── */
 const PLAYERS = ["Cataldo","Ciconte","Crobu","Lamberti","Sgambetterra"];
@@ -671,6 +676,27 @@ async function saveCalDate(idx,val){
 async function clearCalDate(idx){
   document.getElementById('cal-input-'+idx).value="";
   await saveCalDate(idx,"");
+}
+/* v23.10: backup JSON della stagione in corso (dati live già in memoria via onSnapshot) */
+function backupData(){
+  if(!confirm('Scaricare il backup dei dati?')) return;
+  const tsISO=t=>{ try{ return t&&t.toDate?t.toDate().toISOString():(t||null); }catch(e){ return null; } };
+  const clean=x=>{ const o={...x}; if('ts' in o) o.ts=tsISO(o.ts); return o; };
+  const now=new Date();
+  const data={
+    exportedAt: now.toISOString(),
+    appVersion: APP_VERSION,
+    counts: {wins: wins.length, finals: finals.length},
+    wins_2627:   wins.map(clean),
+    finals_2627: finals.map(clean),
+    calendario_2627: {dates: calendario.map(c=>c.data)},
+    campione_2627:   {nome: campioneManuale}
+  };
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='firestore_backup_'+now.toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 async function saveCampione(){
   const v = document.getElementById('in-campione').value;
@@ -1345,6 +1371,7 @@ window.logoutAdmin   = logoutAdmin;
 window.activateAdminTab = activateAdminTab;
 window._archToggle   = archToggle;
 window.saveCampione  = saveCampione;
+window.backupData    = backupData;
 window._delMatch     = delMatch;
 window._toggleG      = toggleG;
 window._refreshNextM = refreshNextM;
