@@ -978,7 +978,7 @@ function generatePDF(){
     const tabHead=(segue)=>{
       dT('TABELLINO GIORNATE'+(segue?' (segue)':''));
       doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(120,120,120);
-      doc.text('PARTITA',xP,y-1);doc.text('VINCITORE (+5)',xW,y-1);doc.text('FINALE PERSA (+1)',xF,y-1);
+      doc.text('PARTITA',xP,y-1);doc.text('VINCITORE (+5 punti)',xW,y-1);doc.text('FINALE PERSA',xF,y-1);
       y+=6;
     };
     const firstH=9+(getMatches(gs[0]).length+((legacyOf(gs[0]).w.length||legacyOf(gs[0]).f.length)?1:0))*7+3;
